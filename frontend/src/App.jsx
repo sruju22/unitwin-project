@@ -1,25 +1,43 @@
-import { useEffect, useState } from "react";
-import axios from "axios";
+import { useState } from 'react';
+import Sidebar from './components/Sidebar';
+import Header from './components/Header';
+import Dashboard from './pages/Dashboard';
+import Campus from './pages/Campus';
+import Placeholder from './pages/Placeholder';
+import './App.css';
 
-function App() {
-  const [message, setMessage] = useState("");
+export default function App() {
+  const [activePage, setActivePage] = useState('dashboard');
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
-  useEffect(() => {
-    axios.get("http://localhost:5001/")
-      .then((res) => {
-        setMessage(res.data);
-      })
-      .catch((err) => {
-        console.error(err);
-      });
-  }, []);
+  function renderPage() {
+    if (activePage === 'dashboard') return <Dashboard onNavigate={setActivePage} />;
+    if (activePage === 'campus') return <Campus />;
+    return <Placeholder page={activePage} />;
+  }
 
   return (
-    <div style={{ textAlign: "center", marginTop: "50px" }}>
-      <h1>Unitwin Dashboard 🚀</h1>
-      <h2>{message}</h2>
+    <div className="app-shell">
+      <Sidebar
+        activePage={activePage}
+        onNavigate={setActivePage}
+        collapsed={sidebarCollapsed}
+        onToggle={() => setSidebarCollapsed((c) => !c)}
+      />
+
+      <div
+        className="main-area"
+        style={{
+          marginLeft: sidebarCollapsed
+            ? 'var(--sidebar-w-col)'
+            : 'var(--sidebar-w)',
+        }}
+      >
+        <Header activePage={activePage} />
+        <main className="page-content" id="main-content">
+          {renderPage()}
+        </main>
+      </div>
     </div>
   );
 }
-
-export default App;

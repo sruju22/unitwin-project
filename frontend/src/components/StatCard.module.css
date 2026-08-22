@@ -1,0 +1,102 @@
+/* StatCard.module.css */
+
+.card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  position: relative;
+  overflow: hidden;
+  transition: transform var(--transition), border-color var(--transition), box-shadow var(--transition);
+  cursor: default;
+}
+
+.card:hover {
+  transform: translateY(-3px);
+  border-color: rgba(255,255,255,0.12);
+  box-shadow: var(--shadow-md);
+}
+
+/* Icon */
+.iconWrap {
+  width: 42px;
+  height: 42px;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.blue   { background: rgba(41,  121, 255, 0.15); color: #4fa3ff; }
+.green  { background: rgba(0,   200, 150, 0.15); color: #00c896; }
+.orange { background: rgba(255, 181,  71, 0.15); color: #ffb547; }
+.red    { background: rgba(255,  79, 109, 0.15); color: #ff4f6d; }
+.cyan   { background: rgba(0,   229, 255, 0.15); color: #00e5ff; }
+
+/* Content */
+.content {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.title {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.valueRow {
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+}
+
+.value {
+  font-family: var(--font-display);
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1;
+}
+
+.unit {
+  font-size: 12px;
+  color: var(--text-muted);
+  font-weight: 400;
+}
+
+.delta {
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.up   { color: var(--success); }
+.down { color: var(--danger);  }
+
+/* Glow bar */
+.glowBar {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  opacity: 0;
+  transition: opacity var(--transition-slow);
+}
+
+.card:hover .glowBar {
+  opacity: 1;
+}
+
+.glowBar.blue   { background: linear-gradient(90deg, transparent, #2979ff, transparent); }
+.glowBar.green  { background: linear-gradient(90deg, transparent, #00c896, transparent); }
+.glowBar.orange { background: linear-gradient(90deg, transparent, #ffb547, transparent); }
+.glowBar.red    { background: linear-gradient(90deg, transparent, #ff4f6d, transparent); }
+.glowBar.cyan   { background: linear-gradient(90deg, transparent, #00e5ff, transparent); }

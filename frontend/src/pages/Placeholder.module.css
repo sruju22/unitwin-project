@@ -1,0 +1,93 @@
+/* Placeholder.module.css */
+
+.wrapper {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 28px;
+}
+
+.card {
+  position: relative;
+  width: 100%;
+  max-width: 560px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-accent);
+  border-radius: var(--radius-xl);
+  overflow: hidden;
+  box-shadow: 0 0 40px rgba(0, 0, 0, 0.3);
+  animation: fadeInUp 0.5s ease both;
+}
+
+/* Dot grid */
+.dots {
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(circle, rgba(255,255,255,0.05) 1px, transparent 1px);
+  background-size: 24px 24px;
+  mask-image: radial-gradient(ellipse 70% 70% at 50% 50%, black 30%, transparent 100%);
+  -webkit-mask-image: radial-gradient(ellipse 70% 70% at 50% 50%, black 30%, transparent 100%);
+  pointer-events: none;
+}
+
+/* Corner brackets — colour driven by CSS var */
+.corner {
+  position: absolute;
+  width: 18px;
+  height: 18px;
+  border-color: var(--page-colour, #2979ff);
+  border-style: solid;
+  opacity: 0.45;
+}
+.tl { top: 16px; left: 16px;  border-width: 2px 0 0 2px; }
+.tr { top: 16px; right: 16px; border-width: 2px 2px 0 0; }
+.bl { bottom: 16px; left: 16px;  border-width: 0 0 2px 2px; }
+.br { bottom: 16px; right: 16px; border-width: 0 2px 2px 0; }
+
+.inner {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  padding: 56px 40px;
+  text-align: center;
+  z-index: 1;
+}
+
+.iconWrap {
+  width: 88px;
+  height: 88px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-accent);
+  border-radius: var(--radius-lg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: pulse-glow 3s ease infinite;
+}
+
+.title {
+  font-size: 26px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.description {
+  font-size: 13.5px;
+  color: var(--text-secondary);
+  line-height: 1.7;
+  max-width: 400px;
+}
+
+.tag {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 5px 14px;
+  border-radius: 99px;
+  border: 1px solid;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  margin-top: 4px;
+}
