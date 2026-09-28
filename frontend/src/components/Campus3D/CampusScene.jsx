@@ -10,10 +10,10 @@ export default function CampusScene({ selectedTime, selectedRoom, onSelectRoom, 
   return (
     <Canvas
       camera={{
-        position: exploreMode ? [0, 0.8, -3.5] : [8, 7, 10],
+        position: exploreMode ? [0, 4.8, 10] : [35, 30, 45],
         fov: 45,
         near: 0.1,
-        far: 200,
+        far: 500,
       }}
       shadows
       style={{ background: 'transparent' }}
@@ -24,18 +24,18 @@ export default function CampusScene({ selectedTime, selectedRoom, onSelectRoom, 
       {/* Lighting */}
       <ambientLight intensity={0.5} />
       <directionalLight
-        position={[10, 15, 10]}
+        position={[20, 40, 20]}
         intensity={1.2}
         castShadow
         shadow-mapSize-width={2048}
         shadow-mapSize-height={2048}
-        shadow-camera-far={50}
-        shadow-camera-left={-15}
-        shadow-camera-right={15}
-        shadow-camera-top={15}
-        shadow-camera-bottom={-15}
+        shadow-camera-far={150}
+        shadow-camera-left={-40}
+        shadow-camera-right={40}
+        shadow-camera-top={40}
+        shadow-camera-bottom={-40}
       />
-      <directionalLight position={[-8, 5, -6]} intensity={0.3} />
+      <directionalLight position={[-15, 10, -10]} intensity={0.3} />
       <hemisphereLight
         args={['#1a1f33', '#0b0d14', 0.4]}
       />
@@ -43,19 +43,19 @@ export default function CampusScene({ selectedTime, selectedRoom, onSelectRoom, 
       {/* Ground grid */}
       <Grid
         position={[0, -0.01, 0]}
-        args={[40, 40]}
+        args={[100, 100]}
         cellSize={1}
         cellThickness={0.5}
         cellColor="#1a2540"
-        sectionSize={5}
+        sectionSize={10}
         sectionThickness={1}
         sectionColor="#2a3560"
-        fadeDistance={30}
+        fadeDistance={80}
         fadeStrength={1.5}
         infiniteGrid
       />
 
-      <fog attach="fog" args={['#0b0d14', 20, 50]} />
+      <fog attach="fog" args={['#0b0d14', 50, 150]} />
 
       <CBlock
         selectedTime={selectedTime}
@@ -73,9 +73,9 @@ export default function CampusScene({ selectedTime, selectedRoom, onSelectRoom, 
           enableRotate
           minPolarAngle={Math.PI / 8}
           maxPolarAngle={Math.PI / 2.2}
-          minDistance={5}
-          maxDistance={30}
-          target={[0, 1.2, 0]}
+          minDistance={10}
+          maxDistance={120}
+          target={[0, 4, 0]}
         />
       )}
     </Canvas>

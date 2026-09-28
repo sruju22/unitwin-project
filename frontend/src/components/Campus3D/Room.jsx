@@ -2,7 +2,7 @@ import { useState, useRef, useMemo } from 'react';
 import { Html } from '@react-three/drei';
 import * as THREE from 'three';
 import { getRoomOccupancy } from '../../data/cblockData';
-import { ROOM_HEIGHT } from './Floor';
+import { CREAM_WALL_MAT } from './materials';
 
 const LEVEL_COLOURS = {
   low:      new THREE.Color('#2979ff'),
@@ -12,7 +12,6 @@ const LEVEL_COLOURS = {
 };
 
 const SELECTED_EMISSIVE = new THREE.Color('#ffffff');
-const WALL_COLOR = new THREE.Color('#ecd9c6');
 
 export default function Room({ room, selectedTime, isSelected, isTargeted, onSelect }) {
   const meshRef = useRef();
@@ -25,23 +24,21 @@ export default function Room({ room, selectedTime, isSelected, isTargeted, onSel
 
   const level = occupancy ? occupancy.level : 'nodata';
   const dataColour = LEVEL_COLOURS[level];
-
-  const baseColor = WALL_COLOR;
   
   // Highlight overlay
   const overlayOpacity = isSelected ? 0.8 : (hovered || isTargeted) ? 0.4 : occupancy ? 0.15 : 0;
   
-  const eps = 0.02;
-  const w = room.visualW + eps;
-  const d = room.visualD + eps;
-  const h = ROOM_HEIGHT + eps;
+  const eps = 0.05;
+  const w = room.visualW;
+  const d = room.visualD;
+  const h = room.visualH;
 
   return (
-    <group position={[0, ROOM_HEIGHT / 2, 0]}>
+    <group position={[0, h / 2, 0]}>
       {/* Base Solid Mesh */}
       <mesh castShadow receiveShadow userData={{ roomId: room.id }}>
-        <boxGeometry args={[w - 0.03, ROOM_HEIGHT, d - 0.03]} />
-        <meshStandardMaterial color={baseColor} roughness={0.9} />
+        <boxGeometry args={[w - 0.1, h, d - 0.1]} />
+        <primitive object={CREAM_WALL_MAT} attach="material" />
       </mesh>
 
       {/* Interactive Highlight Mesh */}
@@ -52,41 +49,41 @@ export default function Room({ room, selectedTime, isSelected, isTargeted, onSel
         onPointerOut={() => { setHovered(false); document.body.style.cursor = 'default'; }}
         userData={{ roomId: room.id }}
       >
-        <boxGeometry args={[w, h, d]} />
+        <boxGeometry args={[w, h + eps, d]} />
         <meshStandardMaterial
           color={dataColour}
           transparent
           opacity={overlayOpacity}
           emissive={isSelected ? SELECTED_EMISSIVE : (isTargeted ? new THREE.Color('#ffffff') : dataColour)}
           emissiveIntensity={isSelected ? 0.4 : (isTargeted ? 0.3 : hovered ? 0.2 : 0)}
-          depthWrite={false}
+          depthWrite={true}
         />
         
         {(isSelected || isTargeted) && (
           <lineSegments>
-            <edgesGeometry args={[new THREE.BoxGeometry(w, h, d)]} />
+            <edgesGeometry args={[new THREE.BoxGeometry(w, h + eps, d)]} />
             <lineBasicMaterial color="#ffffff" transparent opacity={isSelected ? 0.8 : 0.4} />
           </lineSegments>
         )}
       </mesh>
 
       {/* Door (facing the corridor, i.e. +Z locally) */}
-      <mesh position={[0, -ROOM_HEIGHT/2 + 0.3, d/2 + eps]} userData={{ roomId: room.id }}>
-        <boxGeometry args={[0.5, 0.6, 0.05]} />
-        <meshStandardMaterial color="#554433" />
+      <mesh position={[w * 0.3, -h/2 + 1.2, d/2 + eps]} userData={{ roomId: room.id }}>
+        <boxGeometry args={[1.2, 2.4, 0.1]} />
+        <meshStandardMaterial color="#302319" />
       </mesh>
 
       {/* Window */}
-      <mesh position={[0.8, 0, d/2 + eps]} userData={{ roomId: room.id }}>
-        <boxGeometry args={[0.8, 0.4, 0.06]} />
-        <meshStandardMaterial color="#88ccff" transparent opacity={0.6} />
+      <mesh position={[-w * 0.2, -h/2 + 1.5, d/2 + eps]} userData={{ roomId: room.id }}>
+        <boxGeometry args={[2.0, 1.2, 0.1]} />
+        <meshStandardMaterial color="#88ccff" transparent opacity={0.5} />
       </mesh>
 
       {/* Door Label */}
       <Html
-        position={[0, -ROOM_HEIGHT/2 + 0.7, d/2 + 0.05]}
+        position={[w * 0.3, -h/2 + 2.8, d/2 + 0.1]}
         center
-        distanceFactor={4}
+        distanceFactor={20}
         style={{ pointerEvents: 'none' }}
       >
         <div style={{

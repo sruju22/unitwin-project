@@ -5,7 +5,7 @@ import * as THREE from 'three';
 import { usePlayerControls } from './usePlayerControls';
 import { ROOMS } from '../../data/cblockData';
 
-const SPEED = 3.5;
+const SPEED = 12.0;
 
 export default function Player({ onInteract, onHover, hoveredRoomId }) {
   const { camera, scene } = useThree();
@@ -13,9 +13,9 @@ export default function Player({ onInteract, onHover, hoveredRoomId }) {
   const controlsRef = useRef();
 
   useEffect(() => {
-    // Start slightly above Floor 1 in the corridor
-    camera.position.set(0, 0.8, -3.5);
-    camera.lookAt(0, 0.8, 0);
+    // Start at Courtyard center, looking at North block
+    camera.position.set(0, 1.6, 0);
+    camera.lookAt(0, 1.6, -20);
   }, [camera]);
 
   useFrame((state, delta) => {
@@ -49,10 +49,10 @@ export default function Player({ onInteract, onHover, hoveredRoomId }) {
     const nextPos = camera.position.clone().add(velocity);
 
     // Prevent walking completely out of the building bounds (X/Z clamp)
-    if (nextPos.x < -8.0) nextPos.x = -8.0;
-    if (nextPos.x > 8.0) nextPos.x = 8.0;
-    if (nextPos.z < -8.0) nextPos.z = -8.0;
-    if (nextPos.z > 8.0) nextPos.z = 8.0;
+    if (nextPos.x < -35.0) nextPos.x = -35.0;
+    if (nextPos.x > 35.0) nextPos.x = 35.0;
+    if (nextPos.z < -35.0) nextPos.z = -35.0;
+    if (nextPos.z > 35.0) nextPos.z = 35.0;
 
     // --- Vertical Collision via Raycast ---
     const collisionRaycaster = new THREE.Raycaster(
@@ -74,7 +74,7 @@ export default function Player({ onInteract, onHover, hoveredRoomId }) {
 
     // Apply movement if we didn't walk off the edge of the world
     if (highestWalkableY !== null) {
-      camera.position.set(nextPos.x, highestWalkableY + 0.8, nextPos.z);
+      camera.position.set(nextPos.x, highestWalkableY + 1.6, nextPos.z);
     }
 
     // --- Crosshair Hover Raycast ---
