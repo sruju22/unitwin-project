@@ -127,8 +127,8 @@ export default function Dashboard({ onNavigate }) {
           </svg>
         </button>
 
-        {/* 2D Map Preview */}
-        <div style={{ width: '100%', height: '100%', opacity: 0.9 }}>
+        {/* 2D Map Preview (Animated Orbit) */}
+        <div className={styles.mapPreviewLayer}>
           <CampusMap interactive={false} />
         </div>
       </section>

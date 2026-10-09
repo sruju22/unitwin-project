@@ -149,3 +149,35 @@
     gap: 16px;
   }
 }
+
+/* Animated Map Preview Layer */
+.mapPreviewLayer {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  /* 2500px is the mathematically minimum safe dimension to ensure the height (1660px effective) covers the card's maximum 1600px diagonal without exposing corners */
+  width: 2500px;
+  height: 2500px;
+  opacity: 0.9;
+  pointer-events: none;
+  z-index: 0;
+  /* Calm, smooth 80s continuous turntable rotation */
+  animation: turntableSpin 80s linear infinite;
+}
+
+@keyframes turntableSpin {
+  0% {
+    /* Removed the explicit scale() to zoom out, relying entirely on the 2500px bounded fit */
+    transform: translate(-50%, -50%) rotate(0deg);
+  }
+  100% {
+    transform: translate(-50%, -50%) rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mapPreviewLayer {
+    animation: none;
+    transform: translate(-50%, -50%) rotate(0deg);
+  }
+}

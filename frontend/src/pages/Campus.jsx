@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { BUILDING_INFO } from '../data/cblockData';
 import CampusMap from '../components/Campus2D/CampusMap';
-import RoomInfoPanel from '../components/Campus3D/RoomInfoPanel';
+import RoomInfoPanel from '../components/CampusUI/RoomInfoPanel';
 import styles from './Campus.module.css';
 
 export default function Campus() {
@@ -21,12 +21,12 @@ export default function Campus() {
       <div className={styles.content}>
         <div style={{ flex: 1, position: 'relative', width: '100%', height: '100%' }}>
           <CampusMap 
-            interactive={true} 
+            interactive={true}
             onSelectBlock={(blockId) => {
               if (blockId === 'CBLOCK') {
                 setShowPanel(true);
               }
-            }} 
+            }}
           />
         </div>
 
