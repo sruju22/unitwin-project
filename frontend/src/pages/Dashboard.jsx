@@ -1,9 +1,7 @@
-import { Canvas } from '@react-three/fiber';
-import { OrbitControls } from '@react-three/drei';
 import StatCard from '../components/StatCard';
 import RecentAlerts from '../components/RecentAlerts';
 import RecentActivity from '../components/RecentActivity';
-import CBlock from '../components/Campus3D/CBlock';
+import CampusMap from '../components/Campus2D/CampusMap';
 import { BUILDING_INFO } from '../data/cblockData';
 import styles from './Dashboard.module.css';
 
@@ -82,12 +80,12 @@ export default function Dashboard({ onNavigate }) {
         ))}
       </section>
 
-      {/* 3D Campus Preview */}
+      {/* Campus Preview Placeholder -> Now the 2D Map */}
       <section
-        id="campus-3d-placeholder"
+        id="campus-preview"
         className={`${styles.campusPlaceholder} fade-in`}
-        style={{ animationDelay: '180ms', position: 'relative', padding: 0, overflow: 'hidden', height: '400px' }}
-        aria-label="3D Campus View Preview"
+        style={{ animationDelay: '180ms', position: 'relative', padding: 0, overflow: 'hidden', height: '400px', background: '#0f172a' }}
+        aria-label="Campus View Preview"
       >
         <div style={{ position: 'absolute', top: 20, left: 24, zIndex: 10, pointerEvents: 'none' }}>
           <h2 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 600, color: '#f8fafc', letterSpacing: '0.5px' }}>{BUILDING_INFO.label}</h2>
@@ -129,6 +127,7 @@ export default function Dashboard({ onNavigate }) {
           </svg>
         </button>
 
+<<<<<<< Updated upstream
         <Canvas
           camera={{ position: [12, 12, -15], fov: 40 }}
           shadows
@@ -165,6 +164,12 @@ export default function Dashboard({ onNavigate }) {
             target={[0, 1.5, -2]}
           />
         </Canvas>
+=======
+        {/* 2D Map Preview */}
+        <div style={{ width: '100%', height: '100%', opacity: 0.9 }}>
+          <CampusMap interactive={false} />
+        </div>
+>>>>>>> Stashed changes
       </section>
 
       {/* Bottom row: Alerts + Activity */}

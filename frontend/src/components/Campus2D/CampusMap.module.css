@@ -1,0 +1,51 @@
+.container {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+
+.mapWrapper {
+  position: relative;
+  width: 100%;
+  max-width: 1200px;
+  /* Maintain aspect ratio of the image (1024/661 = 1.549) automatically by letting the image dictate height */
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+  border-radius: 8px;
+  overflow: hidden;
+  background-color: #0b0d14;
+}
+
+.satelliteImage {
+  display: block;
+  width: 100%;
+  height: auto;
+  pointer-events: none; /* Keep image from catching events */
+}
+
+.svgOverlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none; /* Let the SVG root pass clicks through */
+}
+
+/* The interactive hotspot for the C-Block */
+.hotspot {
+  fill: rgba(0, 229, 255, 0.0); /* Invisible by default */
+  stroke: rgba(0, 229, 255, 0.0);
+  stroke-width: 3;
+  stroke-linejoin: round;
+  pointer-events: auto; /* Catch clicks on the polygon */
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+}
+
+.hotspot:hover, .hotspotHover {
+  fill: rgba(0, 229, 255, 0.15); /* Subtle cyan highlight */
+  stroke: rgba(0, 229, 255, 0.8); /* Solid border */
+}
