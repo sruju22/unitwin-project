@@ -127,49 +127,10 @@ export default function Dashboard({ onNavigate }) {
           </svg>
         </button>
 
-<<<<<<< Updated upstream
-        <Canvas
-          camera={{ position: [12, 12, -15], fov: 40 }}
-          shadows
-          style={{ width: '100%', height: '100%', background: '#0b0d14' }}
-        >
-          {/* Lighting */}
-          <ambientLight intensity={0.5} />
-          <directionalLight
-            position={[10, 15, 10]}
-            intensity={1.2}
-            castShadow
-            shadow-mapSize-width={1024}
-            shadow-mapSize-height={1024}
-            shadow-camera-far={50}
-            shadow-camera-left={-15}
-            shadow-camera-right={15}
-            shadow-camera-top={15}
-            shadow-camera-bottom={-15}
-          />
-          <directionalLight position={[-8, 5, -6]} intensity={0.3} />
-          <hemisphereLight args={['#1a1f33', '#0b0d14', 0.4]} />
-          
-          <CBlock selectedTime="10:00" />
-          
-          <OrbitControls 
-            autoRotate 
-            autoRotateSpeed={0.5}
-            enableZoom={true} 
-            enablePan={false}
-            minPolarAngle={Math.PI / 6}
-            maxPolarAngle={Math.PI / 2.2}
-            minDistance={15}
-            maxDistance={40}
-            target={[0, 1.5, -2]}
-          />
-        </Canvas>
-=======
         {/* 2D Map Preview */}
         <div style={{ width: '100%', height: '100%', opacity: 0.9 }}>
           <CampusMap interactive={false} />
         </div>
->>>>>>> Stashed changes
       </section>
 
       {/* Bottom row: Alerts + Activity */}
