@@ -27,57 +27,59 @@ export default function CampusMap({ interactive = true, onSelectBlock }) {
     return () => observer.disconnect();
   }, []);
 
-  // 2. Constraints helper: prevents dragging or zooming into black space
+  // 2. Constraints helper: keeps image properly framed and prevents dragging out of bounds
   const applyConstraints = useCallback((newX, newY, newScale, vWidth, vHeight) => {
     const imgWidth = 1538;
     const imgHeight = 1022;
     
-    // Calculate the absolute minimum scale required to cover the viewport
-    const baseMinScale = Math.max(vWidth / imgWidth, vHeight / imgHeight);
+    // fitToScreen scale: ensures the complete image (all boundaries and buildings) fits in the viewport
+    const fitScale = Math.min(vWidth / imgWidth, vHeight / imgHeight);
+    const minScale = fitScale;
+    const maxScale = 5;
     
-    // Apply a 5% overscan factor. This forces the image to be slightly larger than the viewport,
-    // which prevents the CSS rotation/drift animation from revealing black corners.
-    const overscanFactor = 1.05;
-    const minScale = baseMinScale * overscanFactor;
+    const clampedScale = Math.max(minScale, Math.min(newScale, maxScale));
+    const currentW = imgWidth * clampedScale;
+    const currentH = imgHeight * clampedScale;
     
-    // Clamp the scale so the user can never zoom out smaller than the overscanned bounds
-    const clampedScale = Math.max(minScale, Math.min(newScale, 5));
+    let finalX;
+    if (currentW <= vWidth) {
+      // If image width fits within viewport, center it horizontally
+      finalX = (vWidth - currentW) / 2;
+    } else {
+      // If zoomed in wider than viewport, clamp so user can pan between left and right edges
+      const minX = vWidth - currentW;
+      const maxX = 0;
+      finalX = Math.max(minX, Math.min(newX, maxX));
+    }
     
-    // Reserve 2% of the overscan as a dead-zone margin that the user cannot pan past.
-    // This physically reserves pixels off-screen so the live camera drift can safely move into them.
-    const marginX = (imgWidth * clampedScale) * 0.02;
-    const marginY = (imgHeight * clampedScale) * 0.02;
-    
-    const maxX = -marginX;
-    const minX = vWidth - (imgWidth * clampedScale) + marginX;
-    
-    const maxY = -marginY;
-    const minY = vHeight - (imgHeight * clampedScale) + marginY;
-    
-    // Clamp X and Y translation coordinates
-    let finalX = Math.max(minX, Math.min(newX, maxX));
-    let finalY = Math.max(minY, Math.min(newY, maxY));
-    
-    // Failsafe for mathematically inverted bounds (shouldn't happen with proper clamping)
-    if (minX > maxX) finalX = (vWidth - imgWidth * clampedScale) / 2;
-    if (minY > maxY) finalY = (vHeight - imgHeight * clampedScale) / 2;
+    let finalY;
+    if (currentH <= vHeight) {
+      // If image height fits within viewport, center it vertically
+      finalY = (vHeight - currentH) / 2;
+    } else {
+      // If zoomed in taller than viewport, clamp so user can pan between top and bottom edges
+      const minY = vHeight - currentH;
+      const maxY = 0;
+      finalY = Math.max(minY, Math.min(newY, maxY));
+    }
     
     return { x: finalX, y: finalY, scale: clampedScale };
   }, []);
 
-  // 3. Center on mount and constantly re-constrain when window resizes
+  // 3. Fit to screen on initial mount and constantly re-constrain when window resizes
   useEffect(() => {
-    if (viewportSize.width === 0) return;
+    if (viewportSize.width === 0 || viewportSize.height === 0) return;
+    
+    const imgWidth = 1538;
+    const imgHeight = 1022;
+    const fitScale = Math.min(viewportSize.width / imgWidth, viewportSize.height / imgHeight);
     
     if (!isInitialized) {
-      const imgWidth = 1538;
-      const imgHeight = 1022;
-      const baseScale = Math.max(viewportSize.width / imgWidth, viewportSize.height / imgHeight);
-      const initialScale = baseScale * 1.05;
-      const cx = (viewportSize.width - imgWidth * initialScale) / 2;
-      const cy = (viewportSize.height - imgHeight * initialScale) / 2;
+      // Initial framing: fit entire image (including bottommost building and boundaries) within viewport
+      const cx = (viewportSize.width - imgWidth * fitScale) / 2;
+      const cy = (viewportSize.height - imgHeight * fitScale) / 2;
       
-      setTransform({ x: cx, y: cy, scale: initialScale });
+      setTransform({ x: cx, y: cy, scale: fitScale });
       setIsInitialized(true);
     } else {
       // Re-apply constraints securely if the user resizes the window
@@ -94,18 +96,15 @@ export default function CampusMap({ interactive = true, onSelectBlock }) {
       if (!interactive) return;
       e.preventDefault(); // Stop page scroll
       
-      
       setTransform((prev) => {
         const zoomSensitivity = 0.002;
         const delta = -e.deltaY * zoomSensitivity;
         const targetScale = prev.scale * Math.exp(delta);
         
-        // Calculate minScale again here just for the focal point math
         const imgWidth = 1538;
         const imgHeight = 1022;
-        const baseMinScale = Math.max(viewportSize.width / imgWidth, viewportSize.height / imgHeight);
-        const minScale = baseMinScale * 1.05;
-        const clampedScale = Math.max(minScale, Math.min(targetScale, 5));
+        const fitScale = Math.min(viewportSize.width / imgWidth, viewportSize.height / imgHeight);
+        const clampedScale = Math.max(fitScale, Math.min(targetScale, 5));
 
         const rect = viewport.getBoundingClientRect();
         const pointerX = e.clientX - rect.left;
@@ -154,11 +153,6 @@ export default function CampusMap({ interactive = true, onSelectBlock }) {
     }
   };
 
-  // --------------------------------------------------------------------------
-  // Camera animation removed.
-  // A true cinematic perspective effect cannot be achieved with a flat 2D image.
-  // --------------------------------------------------------------------------
-
   return (
     <div 
       className={styles.viewport} 
@@ -169,11 +163,15 @@ export default function CampusMap({ interactive = true, onSelectBlock }) {
       onPointerCancel={handlePointerUp}
       style={{ visibility: isInitialized ? 'visible' : 'hidden' }}
     >
+      {/* Subtle optical camera lens vignette */}
+      <div className={styles.lensVignette} aria-hidden="true" />
+
       <div 
         className={styles.mapContent} 
         style={{ transform: `translate(${transform.x}px, ${transform.y}px) scale(${transform.scale})` }}
       >
-        <div style={{ width: '100%', height: '100%', position: 'relative' }}>
+        {/* Subtle, continuous drone hovering camera layer */}
+        <div className={styles.droneCamera}>
           <img 
             src="/satellite.png" 
             alt="Campus Satellite Map" 

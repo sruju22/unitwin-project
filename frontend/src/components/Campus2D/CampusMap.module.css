@@ -54,33 +54,49 @@
   stroke: rgba(0, 229, 255, 0.8);
 }
 
-/* Subtle Live Camera Effect Layer */
-/* Subtle Live Camera Effect Layer */
-.cameraLayer {
+/* Subtle optical lens vignette to ground the viewport as a camera aperture */
+.lensVignette {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(circle at 50% 50%, transparent 62%, rgba(11, 13, 20, 0.42) 100%);
+  z-index: 5;
+}
+
+/* Drone Survey Camera Layer */
+.droneCamera {
   width: 100%;
   height: 100%;
   transform-origin: center center;
   will-change: transform;
+  animation: droneSurveyFlight 28s ease-in-out infinite;
 }
 
-.liveCamera {
-  /* Slow, smooth 40-second continuous cycle */
-  animation: liveCameraAnim 40s ease-in-out infinite alternate;
-}
-
-.liveCameraPaused {
-  animation: liveCameraAnim 40s ease-in-out infinite alternate;
-  animation-play-state: paused;
-}
-
-@keyframes liveCameraAnim {
+@keyframes droneSurveyFlight {
   0% {
-    transform: translate(0px, 0px) rotate(-0.3deg);
+    transform: scale(1.06) translate(0px, 0px);
+  }
+  25% {
+    /* Gliding southeast across the academic complex and courtyards */
+    transform: scale(1.082) translate(-28px, -18px);
   }
   50% {
-    transform: translate(6px, -4px) rotate(0.3deg);
+    /* Sweeping across the central green quad and auditorium */
+    transform: scale(1.095) translate(8px, -6px);
+  }
+  75% {
+    /* Panning northwest toward the sports grounds and tree canopies */
+    transform: scale(1.072) translate(26px, 16px);
   }
   100% {
-    transform: translate(-4px, 6px) rotate(-0.3deg);
+    /* Seamless return to survey origin */
+    transform: scale(1.06) translate(0px, 0px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .droneCamera {
+    animation: none;
+    transform: none;
   }
 }
