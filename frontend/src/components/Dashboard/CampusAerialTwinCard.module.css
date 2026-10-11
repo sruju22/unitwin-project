@@ -1,0 +1,295 @@
+.card {
+  background: linear-gradient(180deg, rgba(20, 24, 35, 0.8) 0%, rgba(13, 16, 24, 0.9) 100%);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  box-shadow: var(--shadow-aerial);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  transition: border-color var(--transition), box-shadow var(--transition);
+  height: 100%;
+}
+
+/* Soft ambient radial glow behind the hero */
+.card::before {
+  content: '';
+  position: absolute;
+  top: -20%;
+  left: 20%;
+  right: 20%;
+  height: 60%;
+  background: radial-gradient(ellipse at center, rgba(20, 184, 166, 0.12) 0%, rgba(6, 182, 212, 0.04) 40%, transparent 75%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.card:hover {
+  border-color: rgba(20, 184, 166, 0.35);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.6), 0 0 24px rgba(20, 184, 166, 0.1);
+}
+
+/* Card Header outside the imagery */
+.cardHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--border);
+  background: rgba(11, 14, 21, 0.7);
+  z-index: 10;
+  position: relative;
+  gap: 12px;
+}
+
+.titleGroup {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.liveBeacon {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #10b981;
+  box-shadow: 0 0 8px #10b981;
+  animation: beaconBlink 2.5s infinite;
+  flex-shrink: 0;
+}
+
+@keyframes beaconBlink {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.4; transform: scale(0.85); }
+}
+
+.title {
+  font-family: var(--font-display);
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0;
+  letter-spacing: -0.01em;
+}
+
+.subtitle {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin: 1px 0 0;
+}
+
+.headerActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.playbackBtn {
+  background: rgba(15, 23, 42, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: #94a3b8;
+  font-family: var(--font-sans);
+  font-size: 10px;
+  font-weight: 600;
+  padding: 4px 9px;
+  border-radius: 99px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.playbackBtn:hover {
+  background: rgba(20, 184, 166, 0.15);
+  border-color: rgba(20, 184, 166, 0.35);
+  color: #2dd4bf;
+}
+
+.exploreBtn {
+  background: linear-gradient(135deg, rgba(13, 148, 136, 0.28) 0%, rgba(20, 184, 166, 0.16) 100%);
+  border: 1px solid rgba(20, 184, 166, 0.45);
+  color: #2dd4bf;
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: 600;
+  padding: 5px 13px;
+  border-radius: 99px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.exploreBtn:hover {
+  background: linear-gradient(135deg, rgba(13, 148, 136, 0.45) 0%, rgba(20, 184, 166, 0.3) 100%);
+  border-color: #2dd4bf;
+  color: #ffffff;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(20, 184, 166, 0.25);
+}
+
+/*
+  Viewport Container:
+  - Fills the card edge-to-edge with no empty borders or black bars.
+*/
+.viewport {
+  position: relative;
+  width: 100%;
+  flex: 1;
+  min-height: 275px;
+  background: #080a0f;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/*
+  Drone Camera Flight Stage:
+  - Inset of -55px and scale (~1.40) keep the camera close to the buildings.
+  - Generous bleed margin ensures zero black bars appear anywhere during flight.
+*/
+.satelliteStage {
+  position: absolute;
+  inset: -55px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  will-change: transform;
+  transform-origin: 50% 50%;
+  animation: droneCampusTour 38s ease-in-out infinite;
+}
+
+.paused {
+  animation-play-state: paused !important;
+}
+
+.satelliteImage {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  display: block;
+  pointer-events: none;
+  filter: contrast(1.05) brightness(0.98) saturate(0.98);
+}
+
+/*
+  Drone Campus Tour Flight Path (38s seamless loop):
+  Flies close over every major building cluster across campus:
+  1. Bottom Main Building (0% - 15%): Close-up on the large complex, courtyards, solar panels, and hexagonal center.
+  2. Main Building West Wing & Entrance Avenue (16% - 30%): Sweeps along the entrance drive.
+  3. West Academic Wings & Auditorium (31% - 44%): Flies over the western blocks and center hall.
+  4. Top Blue-Roof Academic Complex & Sports Oval (45% - 62%): Close-up on northern blocks and cricket field.
+  5. Top-East Buildings & Pavilion (63% - 72%): Sweeps over the northeast facilities.
+  6. Eastern Laboratory Rows & Workshops (73% - 86%): Flies over the eastern building clusters.
+  7. Return to Bottom Main Building (87% - 100%): Seamlessly glides back to the main building.
+*/
+@keyframes droneCampusTour {
+  0% {
+    /* BOTTOM MAIN BUILDING (Courtyards, solar panels, hexagonal pavilion) */
+    transform: translate3d(-10px, -76px, 0px) rotate(-0.8deg) scale(1.42);
+  }
+  16% {
+    /* MAIN BUILDING WEST WING & ENTRANCE AVENUE */
+    transform: translate3d(28px, -62px, 0px) rotate(-1.2deg) scale(1.40);
+  }
+  32% {
+    /* WEST CAMPUS ACADEMIC BLOCKS & AUDITORIUM */
+    transform: translate3d(36px, -10px, 0px) rotate(-0.5deg) scale(1.39);
+  }
+  48% {
+    /* TOP BLUE-ROOF ACADEMIC BLOCKS (BLOCK C) & SPORTS OVAL */
+    transform: translate3d(24px, 72px, 0px) rotate(0.8deg) scale(1.42);
+  }
+  64% {
+    /* TOP-EAST RED-ROOF BUILDINGS & PAVILION */
+    transform: translate3d(-20px, 60px, 0px) rotate(1.2deg) scale(1.40);
+  }
+  80% {
+    /* EASTERN LABORATORY ROWS & WORKSHOP BLOCKS */
+    transform: translate3d(-46px, -12px, 0px) rotate(0.4deg) scale(1.41);
+  }
+  92% {
+    /* APPROACHING MAIN BUILDING FROM SOUTHEAST */
+    transform: translate3d(-28px, -60px, 0px) rotate(-0.4deg) scale(1.42);
+  }
+  100% {
+    /* SEAMLESS RETURN TO BOTTOM MAIN BUILDING */
+    transform: translate3d(-10px, -76px, 0px) rotate(-0.8deg) scale(1.42);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .satelliteStage {
+    animation: none !important;
+    transform: translate3d(-10px, -76px, 0px) rotate(0deg) scale(1.4) !important;
+  }
+}
+
+/* Optical lens vignette to soften edges and keep bottom chips legible */
+.lensVignette {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(circle at 50% 50%, transparent 68%, rgba(8, 10, 15, 0.4) 100%),
+              linear-gradient(180deg, rgba(8, 10, 15, 0.15) 0%, transparent 10%, transparent 78%, rgba(8, 10, 15, 0.75) 100%);
+  z-index: 5;
+}
+
+/* Image fallback in case satellite image fails to load */
+.imageFallback {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at center, #141926 0%, #090c12 100%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: var(--text-muted);
+  font-size: 11px;
+  z-index: 3;
+}
+
+/* Glass-style metadata chips overlay at bottom corners */
+.chipsOverlay {
+  position: absolute;
+  bottom: 10px;
+  left: 12px;
+  right: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  z-index: 10;
+  pointer-events: none;
+}
+
+.glassChip {
+  background: rgba(10, 14, 22, 0.72);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 6px;
+  padding: 3px 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 10px;
+  font-weight: 500;
+  color: #cbd5e1;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+}
+
+.chipDot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #10b981;
+  box-shadow: 0 0 6px #10b981;
+}

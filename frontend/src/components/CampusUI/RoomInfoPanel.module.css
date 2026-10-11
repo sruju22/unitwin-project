@@ -1,15 +1,76 @@
-/* RoomInfoPanel.module.css */
+/* RoomInfoPanel.module.css — Live Database Integrated Room & Timetable Panel */
 
 .panel {
-  width: 320px;
+  width: 360px;
   background: var(--bg-surface);
   border-left: 1px solid var(--border);
   display: flex;
   flex-direction: column;
+  padding: 18px 20px;
+  gap: 14px;
   overflow-y: auto;
-  padding: 20px;
-  gap: 12px;
-  animation: fadeInUp 0.3s ease both;
+  animation: slideInRight 0.25s cubic-bezier(0.16, 1, 0.3, 1) both;
+  z-index: 20;
+}
+
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Panel Top Nav & Actions */
+.panelTopNav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.backBtn {
+  background: rgba(20, 184, 166, 0.12);
+  border: 1px solid rgba(20, 184, 166, 0.3);
+  color: #2dd4bf;
+  font-family: var(--font-display);
+  font-size: 11px;
+  font-weight: 700;
+  padding: 5px 10px;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.backBtn:hover {
+  background: rgba(20, 184, 166, 0.25);
+  border-color: #2dd4bf;
+  color: #f8fafc;
+  transform: translateX(-2px);
+}
+
+.closeBtn {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font-size: 14px;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.15s;
+}
+
+.closeBtn:hover {
+  color: var(--text-primary);
 }
 
 /* Header */
@@ -20,10 +81,10 @@
 }
 
 .buildingIcon {
-  width: 44px;
-  height: 44px;
-  background: var(--bg-elevated);
-  border: 1px solid var(--border-accent);
+  width: 38px;
+  height: 38px;
+  background: rgba(20, 184, 166, 0.1);
+  border: 1px solid rgba(20, 184, 166, 0.25);
   border-radius: var(--radius-sm);
   display: flex;
   align-items: center;
@@ -34,47 +95,46 @@
 .roomBadge {
   width: 44px;
   height: 44px;
-  background: rgba(0, 229, 255, 0.12);
-  border: 1px solid rgba(0, 229, 255, 0.3);
+  background: rgba(14, 165, 233, 0.12);
+  border: 1px solid rgba(14, 165, 233, 0.3);
   border-radius: var(--radius-sm);
   display: flex;
   align-items: center;
   justify-content: center;
   font-family: var(--font-display);
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 700;
-  color: #00e5ff;
+  color: #38bdf8;
   flex-shrink: 0;
-  letter-spacing: 0.04em;
+}
+
+.headerInfo {
+  min-width: 0;
+  flex: 1;
 }
 
 .title {
-  font-size: 18px;
+  font-family: var(--font-display);
+  font-size: 16px;
   font-weight: 700;
   color: var(--text-primary);
+  margin: 0;
   line-height: 1.2;
 }
 
 .subtitle {
-  font-size: 12px;
+  font-size: 11.5px;
   color: var(--text-muted);
-  margin-top: 2px;
+  margin: 2px 0 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-/* Divider */
 .divider {
   height: 1px;
   background: var(--border);
   width: 100%;
-}
-
-/* Section label */
-.sectionLabel {
-  font-size: 10px;
-  font-weight: 600;
-  letter-spacing: 0.1em;
-  color: var(--text-muted);
-  text-transform: uppercase;
 }
 
 /* Meta Grid */
@@ -91,108 +151,378 @@
 }
 
 .metaLabel {
-  font-size: 10px;
-  font-weight: 500;
+  font-size: 9.5px;
+  font-weight: 600;
   color: var(--text-muted);
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.05em;
 }
 
 .metaValue {
   font-family: var(--font-display);
-  font-size: 15px;
-  font-weight: 600;
+  font-size: 13.5px;
+  font-weight: 700;
   color: var(--text-primary);
 }
 
-/* Occupancy card */
-.occupancyCard {
-  background: var(--bg-elevated);
-  border: 1px solid var(--border);
+/* Section Header */
+.sectionHeaderRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.sectionLabel {
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+  text-transform: uppercase;
+}
+
+.countBadge {
+  font-size: 10px;
+  font-weight: 700;
+  color: #2dd4bf;
+  background: rgba(20, 184, 166, 0.12);
+  border: 1px solid rgba(20, 184, 166, 0.25);
+  padding: 1px 7px;
+  border-radius: 99px;
+}
+
+/* Floor Tabs */
+.floorTabs {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+  background: rgba(13, 15, 20, 0.6);
+  padding: 4px;
   border-radius: var(--radius-sm);
-  padding: 14px;
+  border: 1px solid var(--border);
+}
+
+.floorTab {
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--text-muted);
+  font-family: var(--font-display);
+  font-size: 11px;
+  font-weight: 600;
+  padding: 6px 4px;
+  border-radius: 4px;
+  cursor: pointer;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  align-items: center;
+  gap: 2px;
+  transition: all 0.15s ease;
 }
 
-.occRow {
+.floorTab:hover {
+  color: var(--text-primary);
+}
+
+.floorTabActive {
+  background: rgba(20, 184, 166, 0.18);
+  border-color: rgba(20, 184, 166, 0.4);
+  color: #2dd4bf;
+}
+
+.floorBadge {
+  font-size: 9.5px;
+  font-weight: 700;
+  opacity: 0.85;
+}
+
+/* Room Inventory List */
+.roomList {
   display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 380px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.roomItemBtn {
+  background: rgba(22, 25, 35, 0.7);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 8px 10px;
+  display: flex;
+  align-items: center;
   justify-content: space-between;
-  align-items: center;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  text-align: left;
 }
 
-.occLabel {
-  font-size: 12px;
-  color: var(--text-secondary);
+.roomItemBtn:hover {
+  background: rgba(26, 30, 42, 0.9);
+  border-color: rgba(20, 184, 166, 0.4);
+  transform: translateY(-1px);
 }
 
-.occValue {
-  font-family: var(--font-display);
-  font-size: 16px;
-  font-weight: 700;
-  color: var(--text-primary);
-}
-
-/* Utilization bar */
-.utilRow {
+.roomItemLeft {
   display: flex;
   align-items: center;
   gap: 10px;
+  min-width: 0;
 }
 
-.utilBarOuter {
-  flex: 1;
-  height: 6px;
-  background: var(--bg-card);
-  border-radius: 99px;
-  overflow: hidden;
-}
-
-.utilBarInner {
-  height: 100%;
-  border-radius: 99px;
-  transition: width 0.4s ease, background 0.4s ease;
-}
-
-.utilPercent {
+.roomNumBadge {
   font-family: var(--font-display);
-  font-size: 14px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #38bdf8;
+  background: rgba(56, 189, 248, 0.1);
+  padding: 3px 6px;
+  border-radius: 4px;
+  border: 1px solid rgba(56, 189, 248, 0.2);
+  flex-shrink: 0;
+}
+
+.roomItemDetails {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.roomTypeName {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.roomBlockTag {
+  font-size: 9.5px;
+  color: var(--text-muted);
+}
+
+.chevronIcon {
+  color: var(--text-muted);
+  flex-shrink: 0;
+  transition: transform 0.15s;
+}
+
+.roomItemBtn:hover .chevronIcon {
+  color: #2dd4bf;
+  transform: translateX(2px);
+}
+
+/* Timetable Cards */
+.timetableList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 380px;
+  overflow-y: auto;
+}
+
+.timetableCard {
+  background: rgba(22, 25, 35, 0.8);
+  border: 1px solid var(--border);
+  border-left: 3px solid #2dd4bf;
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.ttTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.ttDay {
+  font-family: var(--font-display);
+  font-size: 11.5px;
   font-weight: 700;
   color: var(--text-primary);
-  min-width: 48px;
-  text-align: right;
 }
 
-/* Level badge */
-.levelBadge {
-  display: inline-flex;
-  align-self: flex-start;
-  font-size: 10px;
-  font-weight: 600;
-  padding: 3px 10px;
+.ttSlotPill {
+  font-size: 9.5px;
+  font-weight: 700;
+  color: #f59e0b;
+  background: rgba(245, 158, 11, 0.12);
+  border: 1px solid rgba(245, 158, 11, 0.25);
+  padding: 1px 6px;
   border-radius: 99px;
-  border: 1px solid;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
 }
 
-/* No data text */
+.ttSubject {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  line-height: 1.3;
+}
+
+.ttBottom {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 2px;
+}
+
+.ttType {
+  font-size: 9.5px;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: #38bdf8;
+}
+
+.ttSection {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text-muted);
+}
+
+/* Timetable Mini States */
+.ttLoadingBox {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 16px;
+  color: var(--text-muted);
+  font-size: 11.5px;
+}
+
+.ttErrorBox {
+  background: rgba(244, 63, 94, 0.1);
+  border: 1px solid rgba(244, 63, 94, 0.25);
+  border-radius: var(--radius-sm);
+  padding: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.errorTextSm {
+  font-size: 11px;
+  color: #f43f5e;
+  margin: 0;
+}
+
+.retryBtnSm {
+  background: rgba(244, 63, 94, 0.2);
+  border: 1px solid rgba(244, 63, 94, 0.4);
+  color: #f43f5e;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+/* Loading & Error States */
+.loadingBox {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 40px 10px;
+  text-align: center;
+}
+
+.spinner {
+  width: 26px;
+  height: 26px;
+  border: 2.5px solid rgba(20, 184, 166, 0.2);
+  border-top-color: #2dd4bf;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+.spinnerSm {
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(20, 184, 166, 0.2);
+  border-top-color: #2dd4bf;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.loadingText {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin: 0;
+}
+
+.errorBox {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 8px;
+  padding: 30px 14px;
+  background: rgba(244, 63, 94, 0.08);
+  border: 1px solid rgba(244, 63, 94, 0.2);
+  border-radius: var(--radius-sm);
+}
+
+.errorIcon {
+  font-size: 24px;
+}
+
+.errorTitle {
+  font-family: var(--font-display);
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #f43f5e;
+  margin: 0;
+}
+
+.errorDesc {
+  font-size: 11.5px;
+  color: var(--text-muted);
+  margin: 0;
+}
+
+.retryBtn {
+  margin-top: 6px;
+  background: rgba(244, 63, 94, 0.18);
+  border: 1px solid rgba(244, 63, 94, 0.4);
+  color: #f43f5e;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 6px 14px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.retryBtn:hover {
+  background: rgba(244, 63, 94, 0.3);
+  color: #f8fafc;
+}
+
 .noData {
   font-size: 12px;
   color: var(--text-muted);
   font-style: italic;
+  padding: 10px 0;
 }
 
-/* Hint */
 .hint {
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 11px;
+  font-size: 10.5px;
   color: var(--text-muted);
   margin-top: auto;
-  padding-top: 12px;
+  padding-top: 10px;
 }
 
 /* Responsive */
@@ -201,6 +531,6 @@
     width: 100%;
     border-left: none;
     border-top: 1px solid var(--border);
-    max-height: 280px;
+    max-height: 340px;
   }
 }

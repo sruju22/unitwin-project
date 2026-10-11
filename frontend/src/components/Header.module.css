@@ -59,13 +59,14 @@
   background: var(--bg-elevated);
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
-  padding: 6px 12px;
-  transition: border-color var(--transition);
+  padding: 5px 10px 5px 12px;
+  transition: border-color var(--transition), background var(--transition);
+  cursor: pointer;
 }
 
-.searchBox:focus-within {
-  border-color: var(--accent-1);
-  box-shadow: 0 0 0 2px rgba(41,121,255,0.15);
+.searchBox:hover {
+  border-color: rgba(20, 184, 166, 0.35);
+  background: var(--bg-hover);
 }
 
 .searchBox svg {
@@ -77,14 +78,26 @@
   background: transparent;
   border: none;
   outline: none;
-  font-size: 13px;
+  font-size: 12.5px;
   color: var(--text-primary);
-  width: 160px;
+  width: 140px;
   font-family: var(--font-sans);
+  cursor: pointer;
 }
 
 .searchInput::placeholder {
   color: var(--text-muted);
+}
+
+.searchShortcut {
+  font-size: 10px;
+  font-family: var(--font-mono);
+  color: var(--text-muted);
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  padding: 1px 5px;
+  border-radius: 4px;
+  line-height: 1.2;
 }
 
 /* Icon button */

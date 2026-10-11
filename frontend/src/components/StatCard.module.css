@@ -1,10 +1,10 @@
-/* StatCard.module.css */
+/* StatCard.module.css — Premium Deep Graphite & Muted Accents */
 
 .card {
-  background: var(--bg-card);
+  background: linear-gradient(180deg, rgba(22, 26, 37, 0.8) 0%, rgba(14, 17, 25, 0.88) 100%);
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
-  padding: 20px;
+  padding: 16px 20px;
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -12,91 +12,177 @@
   overflow: hidden;
   transition: transform var(--transition), border-color var(--transition), box-shadow var(--transition);
   cursor: default;
+  box-shadow: var(--shadow-sm);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
 }
 
 .card:hover {
-  transform: translateY(-3px);
-  border-color: rgba(255,255,255,0.12);
-  box-shadow: var(--shadow-md);
+  transform: translateY(-2.5px);
+  border-color: rgba(255, 255, 255, 0.12);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.5);
+}
+
+/* Header */
+.cardHeader {
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 
 /* Icon */
 .iconWrap {
-  width: 42px;
-  height: 42px;
+  width: 32px;
+  height: 32px;
   border-radius: var(--radius-sm);
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  transition: transform 0.2s ease;
 }
 
-.blue   { background: rgba(41,  121, 255, 0.15); color: #4fa3ff; }
-.green  { background: rgba(0,   200, 150, 0.15); color: #00c896; }
-.orange { background: rgba(255, 181,  71, 0.15); color: #ffb547; }
-.red    { background: rgba(255,  79, 109, 0.15); color: #ff4f6d; }
-.cyan   { background: rgba(0,   229, 255, 0.15); color: #00e5ff; }
-
-/* Content */
-.content {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
+.card:hover .iconWrap {
+  transform: scale(1.05);
 }
+
+.blue   { background: rgba(56, 189, 248, 0.12); color: #38bdf8; border-color: rgba(56, 189, 248, 0.25); }
+.green  { background: rgba(16, 185, 129, 0.12); color: #10b981; border-color: rgba(16, 185, 129, 0.25); }
+.orange { background: rgba(245, 158, 11, 0.12); color: #f59e0b; border-color: rgba(245, 158, 11, 0.25); }
+.red    { background: rgba(244, 63, 94, 0.12); color: #f43f5e; border-color: rgba(244, 63, 94, 0.25); }
+.teal   { background: rgba(20, 184, 166, 0.12); color: #14b8a6; border-color: rgba(20, 184, 166, 0.25); }
 
 .title {
   font-size: 11px;
-  font-weight: 500;
+  font-weight: 600;
   color: var(--text-muted);
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.07em;
+  margin: 0;
 }
 
-.valueRow {
+/* Main value row */
+.mainRow {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 38px;
+}
+
+.valueGroup {
   display: flex;
   align-items: baseline;
-  gap: 5px;
+  gap: 6px;
 }
 
 .value {
   font-family: var(--font-display);
-  font-size: 28px;
+  font-size: 32px;
   font-weight: 700;
   color: var(--text-primary);
   line-height: 1;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
 }
 
 .unit {
-  font-size: 12px;
+  font-size: 13px;
   color: var(--text-muted);
   font-weight: 400;
+  letter-spacing: -0.01em;
 }
 
-.delta {
+.sparkline {
+  flex-shrink: 0;
+  filter: drop-shadow(0 2px 5px rgba(0, 0, 0, 0.3));
+}
+
+/* Footer / Context Row */
+.cardFooter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
   font-size: 11px;
-  font-weight: 600;
+  min-height: 28px;
 }
 
-.up   { color: var(--success); }
-.down { color: var(--danger);  }
+/* Delta Pills */
+.deltaPill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 7px;
+  border-radius: 99px;
+  line-height: 1.2;
+}
 
-/* Glow bar */
+.pillUp {
+  background: var(--success-bg);
+  border: 1px solid var(--success-border);
+  color: #34d399;
+}
+
+.pillDown {
+  background: var(--danger-bg);
+  border: 1px solid var(--danger-border);
+  color: #fb7185;
+}
+
+.pillArrow {
+  font-size: 7.5px;
+}
+
+/* Neutral Delta (no directional comparison) */
+.deltaNeutral {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 10.5px;
+  font-weight: 500;
+  color: var(--text-muted);
+  padding: 2px 0;
+}
+
+.neutralDot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #64748b;
+  opacity: 0.8;
+}
+
+.secondaryText {
+  color: var(--text-muted);
+  font-size: 11px;
+  white-space: nowrap;
+  margin-left: auto;
+}
+
+/* Bottom Glow Bar */
 .glowBar {
   position: absolute;
   bottom: 0;
   left: 0;
   right: 0;
   height: 2px;
-  opacity: 0;
-  transition: opacity var(--transition-slow);
+  opacity: 0.65;
+  transition: opacity var(--transition), height var(--transition);
 }
 
 .card:hover .glowBar {
   opacity: 1;
+  height: 2.5px;
 }
 
-.glowBar.blue   { background: linear-gradient(90deg, transparent, #2979ff, transparent); }
-.glowBar.green  { background: linear-gradient(90deg, transparent, #00c896, transparent); }
-.glowBar.orange { background: linear-gradient(90deg, transparent, #ffb547, transparent); }
-.glowBar.red    { background: linear-gradient(90deg, transparent, #ff4f6d, transparent); }
-.glowBar.cyan   { background: linear-gradient(90deg, transparent, #00e5ff, transparent); }
+.glowBar.blue   { background: linear-gradient(90deg, transparent, #38bdf8, transparent); }
+.glowBar.green  { background: linear-gradient(90deg, transparent, #10b981, transparent); }
+.glowBar.orange { background: linear-gradient(90deg, transparent, #f59e0b, transparent); }
+.glowBar.red    { background: linear-gradient(90deg, transparent, #f43f5e, transparent); }
+.glowBar.teal   { background: linear-gradient(90deg, transparent, #14b8a6, transparent); }

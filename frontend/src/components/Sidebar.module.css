@@ -131,8 +131,9 @@
 }
 
 .navItem.active {
-  background: rgba(41, 121, 255, 0.12);
-  color: var(--accent-2);
+  background: rgba(20, 184, 166, 0.1);
+  border: 1px solid rgba(20, 184, 166, 0.2);
+  color: #2dd4bf;
 }
 
 .navItem.active::before {
@@ -141,10 +142,11 @@
   left: -10px;
   top: 50%;
   transform: translateY(-50%);
-  width: 3px;
-  height: 60%;
-  background: var(--accent-grad);
+  width: 3.5px;
+  height: 65%;
+  background: linear-gradient(180deg, #14b8a6 0%, #06b6d4 100%);
   border-radius: 0 3px 3px 0;
+  box-shadow: 0 0 8px rgba(20, 184, 166, 0.4);
 }
 
 .navIcon {

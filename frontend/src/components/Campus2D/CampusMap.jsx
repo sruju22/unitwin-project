@@ -79,6 +79,7 @@ export default function CampusMap({ interactive = true, onSelectBlock }) {
       const cx = (viewportSize.width - imgWidth * fitScale) / 2;
       const cy = (viewportSize.height - imgHeight * fitScale) / 2;
       
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setTransform({ x: cx, y: cy, scale: fitScale });
       setIsInitialized(true);
     } else {
