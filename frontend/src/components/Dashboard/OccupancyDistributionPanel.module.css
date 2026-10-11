@@ -1,0 +1,374 @@
+.panel {
+  background: linear-gradient(180deg, rgba(24, 28, 38, 0.75) 0%, rgba(19, 22, 31, 0.85) 100%);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 18px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(12px);
+  transition: border-color var(--transition);
+  height: 100%;
+}
+
+.panel:hover {
+  border-color: rgba(20, 184, 166, 0.3);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.titleGroup {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.iconChip {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-sm);
+  background: rgba(16, 185, 129, 0.12);
+  color: #10b981;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(16, 185, 129, 0.25);
+}
+
+.title {
+  font-family: var(--font-display);
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0;
+  letter-spacing: -0.01em;
+}
+
+.subtitle {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin: 2px 0 0;
+}
+
+.twinActionBtn {
+  background: linear-gradient(135deg, rgba(13, 148, 136, 0.2) 0%, rgba(20, 184, 166, 0.15) 100%);
+  border: 1px solid rgba(20, 184, 166, 0.35);
+  color: #2dd4bf;
+  font-family: var(--font-display);
+  font-size: 11px;
+  font-weight: 700;
+  padding: 5px 12px;
+  border-radius: 99px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.twinActionBtn:hover {
+  background: linear-gradient(135deg, rgba(13, 148, 136, 0.35) 0%, rgba(20, 184, 166, 0.25) 100%);
+  border-color: #2dd4bf;
+  color: #f8fafc;
+  transform: translateY(-1px);
+}
+
+/* Content Grid: Spacious Layout */
+.contentGrid {
+  display: grid;
+  grid-template-columns: 1fr 1.25fr;
+  gap: 18px;
+}
+
+@media (max-width: 950px) {
+  .contentGrid {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+}
+
+.subHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.subTitle {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  letter-spacing: 0.05em;
+}
+
+.campusLoadBadge {
+  font-size: 10.5px;
+  color: var(--text-muted);
+}
+
+/* Building Matrix */
+.buildingMatrix {
+  display: flex;
+  flex-direction: column;
+}
+
+.buildingList {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.buildingRow {
+  background: rgba(13, 15, 20, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  border-radius: var(--radius-sm);
+  padding: 8px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  transition: all 0.15s ease;
+}
+
+.buildingRow:hover {
+  background: rgba(13, 15, 20, 0.65);
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+.buildingMeta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
+}
+
+.codeRow {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.buildingCode {
+  font-family: var(--font-display);
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.statusPill {
+  font-size: 8.5px;
+  font-weight: 600;
+  padding: 1px 5px;
+  border-radius: 99px;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.statusPill.warning {
+  background: rgba(245, 158, 11, 0.12);
+  color: #fbbf24;
+  border: 1px solid rgba(245, 158, 11, 0.3);
+}
+
+.statusPill.maintenance {
+  background: rgba(244, 63, 94, 0.12);
+  color: #f87171;
+  border: 1px solid rgba(244, 63, 94, 0.3);
+}
+
+.buildingName {
+  font-size: 11px;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.buildingProgressWrap {
+  width: 105px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.progressText {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 9.5px;
+}
+
+.occPercent {
+  font-weight: 700;
+  color: var(--text-primary);
+  font-family: var(--font-display);
+}
+
+.sensorCount {
+  color: var(--text-muted);
+}
+
+.barTrack {
+  height: 3.5px;
+  background: rgba(255, 255, 255, 0.07);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.barFill {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 0.3s ease;
+}
+
+/* Floor Deep Dive */
+.floorDeepDive {
+  display: flex;
+  flex-direction: column;
+}
+
+.floorTabs {
+  display: flex;
+  gap: 3px;
+  background: rgba(13, 15, 20, 0.7);
+  padding: 2px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.floorBtn {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font-size: 10px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.floorBtnActive {
+  background: rgba(20, 184, 166, 0.2);
+  color: #2dd4bf;
+  border: 1px solid rgba(20, 184, 166, 0.35);
+}
+
+/* Floor Summary Strip */
+.floorSummaryStrip {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  background: rgba(13, 15, 20, 0.5);
+  padding: 7px 12px;
+  border-radius: var(--radius-sm);
+  margin-bottom: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.statBox {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.statLabel {
+  font-size: 8.5px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+}
+
+.statValue {
+  font-family: var(--font-display);
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.statUnit {
+  font-size: 9.5px;
+  color: var(--text-muted);
+  font-weight: 400;
+}
+
+/* Room List */
+.roomList {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  max-height: 160px;
+  overflow-y: auto;
+  padding-right: 2px;
+}
+
+.roomCard {
+  background: rgba(13, 15, 20, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  border-radius: var(--radius-sm);
+  padding: 7px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.roomHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.roomLabel {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.roomTypeTag {
+  font-size: 8.5px;
+  color: var(--text-muted);
+  background: rgba(255, 255, 255, 0.04);
+  padding: 1px 5px;
+  border-radius: 3px;
+}
+
+.roomBarTrack {
+  height: 3px;
+  background: rgba(255, 255, 255, 0.07);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.roomBarFill {
+  height: 100%;
+  border-radius: 2px;
+}
+
+.roomFooter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 9px;
+}
+
+.roomUtil {
+  color: #14b8a6;
+  font-weight: 600;
+}
+
+.roomCapacity {
+  color: var(--text-muted);
+}

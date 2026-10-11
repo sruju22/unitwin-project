@@ -1,0 +1,102 @@
+.viewport {
+  width: 100%;
+  height: 100%;
+  background-color: #0b0d14; /* Dark theme background */
+  overflow: hidden;
+  position: relative;
+  cursor: grab;
+  touch-action: none; /* Prevents default browser pan/zoom gestures */
+}
+
+.viewport:active {
+  cursor: grabbing;
+}
+
+.mapContent {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 1538px;
+  height: 1022px;
+  transform-origin: 0 0;
+  will-change: transform;
+}
+
+.satelliteImage {
+  display: block;
+  width: 100%;
+  height: 100%;
+  pointer-events: none; /* Image shouldn't capture events */
+}
+
+.svgOverlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none; /* Let empty space pass through */
+}
+
+/* Polygons will use this class once coordinates are mapped */
+.interactivePolygon {
+  fill: rgba(0, 229, 255, 0.0);
+  stroke: rgba(0, 229, 255, 0.0);
+  stroke-width: 3;
+  stroke-linejoin: round;
+  cursor: pointer;
+  pointer-events: auto; /* Catch events on the polygon shapes */
+  transition: all 0.2s ease-in-out;
+}
+
+.interactivePolygon:hover {
+  fill: rgba(0, 229, 255, 0.15); /* Unitwin cyan highlight */
+  stroke: rgba(0, 229, 255, 0.8);
+}
+
+/* Subtle optical lens vignette to ground the viewport as a camera aperture */
+.lensVignette {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(circle at 50% 50%, transparent 62%, rgba(11, 13, 20, 0.42) 100%);
+  z-index: 5;
+}
+
+/* Drone Survey Camera Layer */
+.droneCamera {
+  width: 100%;
+  height: 100%;
+  transform-origin: center center;
+  will-change: transform;
+  animation: droneSurveyFlight 28s ease-in-out infinite;
+}
+
+@keyframes droneSurveyFlight {
+  0% {
+    transform: scale(1.06) translate(0px, 0px);
+  }
+  25% {
+    /* Gliding southeast across the academic complex and courtyards */
+    transform: scale(1.082) translate(-28px, -18px);
+  }
+  50% {
+    /* Sweeping across the central green quad and auditorium */
+    transform: scale(1.095) translate(8px, -6px);
+  }
+  75% {
+    /* Panning northwest toward the sports grounds and tree canopies */
+    transform: scale(1.072) translate(26px, 16px);
+  }
+  100% {
+    /* Seamless return to survey origin */
+    transform: scale(1.06) translate(0px, 0px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .droneCamera {
+    animation: none;
+    transform: none;
+  }
+}

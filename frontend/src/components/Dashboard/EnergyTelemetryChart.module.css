@@ -1,0 +1,280 @@
+.panel {
+  background: linear-gradient(180deg, rgba(22, 26, 37, 0.8) 0%, rgba(14, 17, 25, 0.88) 100%);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 18px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  position: relative;
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  transition: border-color var(--transition), box-shadow var(--transition);
+  height: 100%;
+}
+
+.panel:hover {
+  border-color: rgba(20, 184, 166, 0.3);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.titleGroup {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.iconChip {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-sm);
+  background: rgba(56, 189, 248, 0.12);
+  color: #38bdf8;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(56, 189, 248, 0.25);
+  flex-shrink: 0;
+}
+
+.title {
+  font-family: var(--font-display);
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0;
+  letter-spacing: -0.01em;
+}
+
+.subtitle {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin: 2px 0 0;
+}
+
+/* Range tabs */
+.rangeTabs {
+  display: flex;
+  gap: 3px;
+  background: rgba(10, 12, 18, 0.7);
+  padding: 3px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.rangeBtn {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font-size: 10.5px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.rangeBtn:hover {
+  color: var(--text-primary);
+}
+
+.rangeActive {
+  background: rgba(20, 184, 166, 0.18);
+  color: #2dd4bf;
+  border: 1px solid rgba(20, 184, 166, 0.35);
+}
+
+/* Telemetry Metric Strip */
+.metricsStrip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: rgba(11, 14, 21, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.045);
+  border-radius: var(--radius-sm);
+  padding: 10px 16px;
+  gap: 12px;
+}
+
+.metricItem {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.metricLabel {
+  font-size: 9.5px;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  letter-spacing: 0.06em;
+}
+
+.metricValue {
+  font-family: var(--font-display);
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+
+.solarAccent {
+  color: #10b981;
+}
+
+.netAccent {
+  color: #38bdf8;
+}
+
+.metricUnit {
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--text-muted);
+}
+
+.metricDivider {
+  width: 1px;
+  height: 24px;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+/* SVG Chart Wrap */
+.chartWrap {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+}
+
+.svgChart {
+  width: 100%;
+  height: 155px;
+  overflow: visible;
+}
+
+.axisText {
+  fill: #64748b;
+  font-size: 9.5px;
+  font-family: var(--font-sans);
+}
+
+/* Legend */
+.legendRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding-top: 6px;
+  border-top: 1px solid rgba(255, 255, 255, 0.04);
+  font-size: 10.5px;
+  color: var(--text-secondary);
+}
+
+.legendItem {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.legendDot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+}
+
+.hoverTimeBadge {
+  margin-left: auto;
+  font-size: 10.5px;
+  color: var(--text-muted);
+}
+
+.hoverTimeBadge strong {
+  color: #14b8a6;
+  font-weight: 600;
+}
+
+/* Awaiting Telemetry State */
+.awaitingTelemetryWrap {
+  height: 165px;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(11, 14, 21, 0.45);
+  border: 1px dashed rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius-sm);
+  padding: 18px 24px;
+}
+
+.awaitingCard {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  max-width: 520px;
+}
+
+.awaitingIconWrap {
+  width: 42px;
+  height: 42px;
+  border-radius: var(--radius-sm);
+  background: rgba(56, 189, 248, 0.08);
+  border: 1px solid rgba(56, 189, 248, 0.2);
+  color: #38bdf8;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.awaitingTextCol {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.awaitingHeadingRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.awaitingHeading {
+  font-family: var(--font-display);
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.awaitingTag {
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: #94a3b8;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 2px 7px;
+  border-radius: 4px;
+  letter-spacing: 0.04em;
+}
+
+.awaitingDesc {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin: 0;
+  line-height: 1.45;
+}

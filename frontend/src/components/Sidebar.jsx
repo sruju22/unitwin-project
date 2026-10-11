@@ -85,11 +85,10 @@ const NAV_ITEMS = [
         <path d="M13.73 21a2 2 0 0 1-3.46 0" />
       </svg>
     ),
-    badge: 3,
   },
 ];
 
-export default function Sidebar({ activePage, onNavigate, collapsed, onToggle }) {
+export default function Sidebar({ activePage, onNavigate, collapsed, onToggle, alertCount = 0 }) {
   return (
     <aside className={`${styles.sidebar} ${collapsed ? styles.collapsed : ''}`}>
       {/* Brand */}
@@ -135,6 +134,7 @@ export default function Sidebar({ activePage, onNavigate, collapsed, onToggle })
       <nav className={styles.nav}>
         {NAV_ITEMS.map((item) => {
           const isActive = activePage === item.id;
+          const itemBadge = item.id === 'alerts' && alertCount > 0 ? alertCount : item.badge;
           return (
             <button
               key={item.id}
@@ -145,10 +145,10 @@ export default function Sidebar({ activePage, onNavigate, collapsed, onToggle })
             >
               <span className={styles.navIcon}>{item.icon}</span>
               {!collapsed && <span className={styles.navLabel}>{item.label}</span>}
-              {!collapsed && item.badge && (
-                <span className={styles.badge}>{item.badge}</span>
+              {!collapsed && itemBadge && (
+                <span className={styles.badge}>{itemBadge}</span>
               )}
-              {collapsed && item.badge && (
+              {collapsed && itemBadge && (
                 <span className={styles.badgeDot} />
               )}
             </button>
