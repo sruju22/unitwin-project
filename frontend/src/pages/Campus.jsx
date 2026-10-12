@@ -7,7 +7,9 @@ import { getCampusLogicalAnalytics } from '../data/buildingRegistry';
 import styles from './Campus.module.css';
 
 export default function Campus() {
+  const mapRef = useRef(null);
   const [selectedBuilding, setSelectedBuilding] = useState(null);
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [hoveredBuilding, setHoveredBuilding] = useState(null);
   const [inspectingBuildingId, setInspectingBuildingId] = useState(null);
   const [statusFilter, setStatusFilter] = useState('all');
@@ -17,10 +19,25 @@ export default function Campus() {
 
   const handleSelectBuilding = useCallback((building) => {
     setSelectedBuilding(building);
+    if (!building) {
+      setIsDrawerOpen(false);
+    }
     if (hoverLeaveTimerRef.current) {
       clearTimeout(hoverLeaveTimerRef.current);
       hoverLeaveTimerRef.current = null;
     }
+  }, []);
+
+  const handleInspectBuilding = useCallback((building) => {
+    setSelectedBuilding(building);
+    setIsDrawerOpen(true);
+  }, []);
+
+  const handleClosePreview = useCallback(() => {
+    setSelectedBuilding(null);
+    setIsDrawerOpen(false);
+    setHoveredBuilding(null);
+    mapRef.current?.clearHover?.();
   }, []);
 
   const handleHoverBuilding = useCallback((building) => {
@@ -43,6 +60,8 @@ export default function Campus() {
       clearTimeout(hoverLeaveTimerRef.current);
       hoverLeaveTimerRef.current = null;
     }
+    setHoveredBuilding(null);
+    mapRef.current?.clearHover?.();
   }, []);
 
   const handleDrawerMouseLeave = useCallback(() => {
@@ -52,8 +71,7 @@ export default function Campus() {
   }, [selectedBuilding]);
 
   const handleCloseDrawer = useCallback(() => {
-    setSelectedBuilding(null);
-    setHoveredBuilding(null);
+    setIsDrawerOpen(false);
   }, []);
 
   const handleBuildingsLoaded = useCallback(() => {
@@ -68,115 +86,117 @@ export default function Campus() {
     setAnalytics(getCampusLogicalAnalytics());
   }, [hoveredBuilding]);
 
-  const activeDisplayBuilding = hoveredBuilding || selectedBuilding;
-  const isHoverPreview = Boolean(
-    hoveredBuilding && (!selectedBuilding || hoveredBuilding.id !== selectedBuilding.id)
-  );
+  const activeDisplayBuilding = isDrawerOpen ? selectedBuilding : null;
+  const isHoverPreview = false;
 
   return (
     <div className={styles.page}>
-      {/* Top bar with synchronized status chips & analytics trigger */}
+      {/* Consolidated Campus Toolbar */}
       <div className={styles.topBar}>
         <div className={styles.buildingLabel}>
+          <span className={styles.toolbarIcon}>🏛️</span>
           <h2 className={styles.blockName}>Campus Infrastructure Twin</h2>
-          <span className={styles.blockSub}>Interactive Spatial Intelligence &amp; Facility Analytics</span>
+          <span className={styles.toolbarDivider}>•</span>
+          <span className={styles.blockSub}>Spatial Twin &amp; Analytics</span>
           <span className={styles.liveTag}>
             <span className={styles.liveDot} />
-            {analytics.totalBuildings} Campus Buildings
+            {analytics.totalBuildings} Facilities
           </span>
         </div>
 
-        {/* Synchronized status filter buttons */}
+        {/* Synchronized status summary chips & analytics action */}
         <div className={styles.topChips}>
-          <button
-            className={`${styles.glassChipBtn} ${statusFilter === 'all' ? styles.chipBtnActive : ''}`}
-            onClick={() => setStatusFilter('all')}
-            title="Show all campus structures"
-          >
-            <span>Total:</span>
-            <strong>{analytics.totalBuildings}</strong>
-          </button>
+          <div className={styles.chipSegmentGroup}>
+            <button
+              className={`${styles.statusChipBtn} ${statusFilter === 'all' ? styles.chipBtnActive : ''}`}
+              onClick={() => setStatusFilter('all')}
+              title="Show all campus structures"
+            >
+              <span>Total</span>
+              <span className={styles.chipCountBadge}>{analytics.totalBuildings}</span>
+            </button>
 
-          <button
-            className={`${styles.glassChipBtn} ${statusFilter === 'operational' ? styles.chipBtnActive : ''}`}
-            onClick={() => setStatusFilter(statusFilter === 'operational' ? 'all' : 'operational')}
-            title="Filter to operational facilities"
-          >
-            <span style={{ color: '#10b981' }}>● Oper:</span>
-            <strong>{analytics.statusCounts.operational}</strong>
-          </button>
+            <button
+              className={`${styles.statusChipBtn} ${statusFilter === 'operational' ? styles.chipBtnActive : ''}`}
+              onClick={() => setStatusFilter(statusFilter === 'operational' ? 'all' : 'operational')}
+              title="Filter to operational facilities"
+            >
+              <span className={styles.chipDot} style={{ background: '#10b981' }} />
+              <span>Oper</span>
+              <span className={styles.chipCountBadge}>{analytics.statusCounts.operational}</span>
+            </button>
 
-          <button
-            className={`${styles.glassChipBtn} ${statusFilter === 'maintenance' ? styles.chipBtnActive : ''}`}
-            onClick={() => setStatusFilter(statusFilter === 'maintenance' ? 'all' : 'maintenance')}
-            title="Filter to facilities under maintenance"
-          >
-            <span style={{ color: '#06b6d4' }}>● Maint:</span>
-            <strong>{analytics.statusCounts.maintenance}</strong>
-          </button>
+            <button
+              className={`${styles.statusChipBtn} ${statusFilter === 'maintenance' ? styles.chipBtnActive : ''}`}
+              onClick={() => setStatusFilter(statusFilter === 'maintenance' ? 'all' : 'maintenance')}
+              title="Filter to facilities under maintenance"
+            >
+              <span className={styles.chipDot} style={{ background: '#06b6d4' }} />
+              <span>Maint</span>
+              <span className={styles.chipCountBadge}>{analytics.statusCounts.maintenance}</span>
+            </button>
 
-          <button
-            className={`${styles.glassChipBtn} ${statusFilter === 'warning' ? styles.chipBtnActive : ''}`}
-            onClick={() => setStatusFilter(statusFilter === 'warning' ? 'all' : 'warning')}
-            title="Filter to facilities with warnings"
-          >
-            <span style={{ color: '#f59e0b' }}>● Warn:</span>
-            <strong>{analytics.statusCounts.warning}</strong>
-          </button>
+            <button
+              className={`${styles.statusChipBtn} ${statusFilter === 'warning' ? styles.chipBtnActive : ''}`}
+              onClick={() => setStatusFilter(statusFilter === 'warning' ? 'all' : 'warning')}
+              title="Filter to facilities with warnings"
+            >
+              <span className={styles.chipDot} style={{ background: '#f59e0b' }} />
+              <span>Warn</span>
+              <span className={styles.chipCountBadge}>{analytics.statusCounts.warning}</span>
+            </button>
 
-          <button
-            className={`${styles.glassChipBtn} ${statusFilter === 'critical' ? styles.chipBtnActive : ''}`}
-            onClick={() => setStatusFilter(statusFilter === 'critical' ? 'all' : 'critical')}
-            title="Filter to critical facilities"
-          >
-            <span style={{ color: '#ef4444' }}>● Crit:</span>
-            <strong>{analytics.statusCounts.critical}</strong>
-          </button>
+            <button
+              className={`${styles.statusChipBtn} ${statusFilter === 'critical' ? styles.chipBtnActive : ''}`}
+              onClick={() => setStatusFilter(statusFilter === 'critical' ? 'all' : 'critical')}
+              title="Filter to critical facilities"
+            >
+              <span className={styles.chipDot} style={{ background: '#ef4444' }} />
+              <span>Crit</span>
+              <span className={styles.chipCountBadge}>{analytics.statusCounts.critical}</span>
+            </button>
 
-          <button
-            className={`${styles.glassChipBtn} ${statusFilter === 'unknown' ? styles.chipBtnActive : ''}`}
-            onClick={() => setStatusFilter(statusFilter === 'unknown' ? 'all' : 'unknown')}
-            title="Filter to unverified / initial status buildings"
-          >
-            <span style={{ color: '#94a3b8' }}>● Unk:</span>
-            <strong>{analytics.statusCounts.unknown}</strong>
-          </button>
+            <button
+              className={`${styles.statusChipBtn} ${statusFilter === 'unknown' ? styles.chipBtnActive : ''}`}
+              onClick={() => setStatusFilter(statusFilter === 'unknown' ? 'all' : 'unknown')}
+              title="Filter to unverified / standby facilities"
+            >
+              <span className={styles.chipDot} style={{ background: '#94a3b8' }} />
+              <span>Unk</span>
+              <span className={styles.chipCountBadge}>{analytics.statusCounts.unknown}</span>
+            </button>
+          </div>
 
           <button
             className={styles.analyticsTriggerBtn}
             onClick={() => setIsAnalyticsModalOpen(true)}
             title="Open comprehensive building register and type breakdown"
           >
-            <span>📊 Register &amp; Analytics</span>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="18" y1="20" x2="18" y2="10" />
+              <line x1="12" y1="20" x2="12" y2="4" />
+              <line x1="6" y1="20" x2="6" y2="14" />
+            </svg>
+            <span>Register &amp; Analytics</span>
           </button>
         </div>
       </div>
 
-      {/* Main content: Dedicated 2D Campus Map with HUD & Details Drawer */}
+      {/* Main content: Dedicated 2D Campus Map with HUD & Docked Details Drawer */}
       <div className={styles.content}>
-        <div style={{ flex: 1, position: 'relative', width: '100%', height: '100%' }}>
+        <div className={styles.mapContainer}>
           <CampusMap
+            ref={mapRef}
             interactive={true}
-            selectedBuildingId={selectedBuilding ? selectedBuilding.id : (hoveredBuilding ? hoveredBuilding.id : null)}
+            selectedBuilding={selectedBuilding}
+            selectedBuildingId={selectedBuilding ? selectedBuilding.id : null}
             onSelectBuilding={handleSelectBuilding}
+            onInspectBuilding={handleInspectBuilding}
+            onClosePreview={handleClosePreview}
             onHoverBuilding={handleHoverBuilding}
             onBuildingsLoaded={handleBuildingsLoaded}
             externalStatusFilter={statusFilter}
           />
-
-          {/* Building Details Drawer (Previews on Hover, Locks on Click) */}
-          {activeDisplayBuilding && !inspectingBuildingId && (
-            <BuildingDetailsDrawer
-              building={activeDisplayBuilding}
-              isHoverPreview={isHoverPreview}
-              onPinBuilding={(b) => setSelectedBuilding(b)}
-              onClose={handleCloseDrawer}
-              onBuildingUpdated={handleBuildingUpdated}
-              onOpenRoomInspector={(bldId) => setInspectingBuildingId(bldId)}
-              onMouseEnter={handleDrawerMouseEnter}
-              onMouseLeave={handleDrawerMouseLeave}
-            />
-          )}
 
           {/* Room-Level Digital Twin Modal (for C-Block / BLD001) */}
           {inspectingBuildingId && (
@@ -250,6 +270,23 @@ export default function Campus() {
             </div>
           )}
         </div>
+
+        {/* Building Details Drawer (Docked side panel fitting viewport height) */}
+        {activeDisplayBuilding && !inspectingBuildingId && (
+          <div className={styles.detailsPanelWrapper}>
+            <BuildingDetailsDrawer
+              building={activeDisplayBuilding}
+              isHoverPreview={isHoverPreview}
+              onPinBuilding={(b) => setSelectedBuilding(b)}
+              onClose={handleCloseDrawer}
+              onFocusOnMap={(b) => mapRef.current?.focusBuilding(b)}
+              onBuildingUpdated={handleBuildingUpdated}
+              onOpenRoomInspector={(bldId) => setInspectingBuildingId(bldId)}
+              onMouseEnter={handleDrawerMouseEnter}
+              onMouseLeave={handleDrawerMouseLeave}
+            />
+          </div>
+        )}
       </div>
 
       {/* Comprehensive Campus Analytics & Register Modal */}

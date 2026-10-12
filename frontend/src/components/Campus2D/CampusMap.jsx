@@ -1,5 +1,5 @@
-import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
-import { getLogicalBuildings, getBuildingByAnnotationId } from '../../data/buildingRegistry';
+import React, { useState, useRef, useEffect, useCallback, useMemo, useImperativeHandle, forwardRef } from 'react';
+import { getLogicalBuildings } from '../../data/buildingRegistry';
 import styles from './CampusMap.module.css';
 
 const IMG_WIDTH = 1280;
@@ -13,14 +13,17 @@ const STATUS_META = {
   unknown:     { label: 'Unknown',     color: '#94a3b8', bg: 'rgba(148, 163, 184, 0.15)' },
 };
 
-export default function CampusMap({
+const CampusMap = forwardRef(function CampusMap({
   interactive = true,
+  selectedBuilding = null,
   selectedBuildingId = null,
   onSelectBuilding = null,
+  onInspectBuilding = null,
+  onClosePreview = null,
   onHoverBuilding = null,
   onBuildingsLoaded = null,
   externalStatusFilter = 'all',
-}) {
+}, ref) {
   const viewportRef = useRef(null);
   const [transform, setTransform] = useState({ x: 0, y: 0, scale: 1 });
   const [viewportSize, setViewportSize] = useState({ width: 0, height: 0 });
@@ -32,10 +35,24 @@ export default function CampusMap({
   // Logical building data & interaction states
   const [buildings, setBuildings] = useState([]);
   const [hoveredBuilding, setHoveredBuilding] = useState(null);
-  const [tooltipPos, setTooltipPos] = useState({ x: 0, y: 0 });
-  const [showLabels, setShowLabels] = useState(true);
   const [isDroneFlightPlaying, setIsDroneFlightPlaying] = useState(false);
   const [showLegend, setShowLegend] = useState(false);
+
+  // Resolved selected building strictly from selection props
+  const resolvedSelectedBuilding = useMemo(() => {
+    if (selectedBuilding) return selectedBuilding;
+    if (selectedBuildingId) {
+      return buildings.find((b) => b.id === selectedBuildingId) || null;
+    }
+    return null;
+  }, [selectedBuilding, selectedBuildingId, buildings]);
+
+  // Priority preview rule:
+  // 1. If a building is selected, display the selected building's preview.
+  // 2. Otherwise, if a building is hovered, display the hover preview.
+  // 3. Otherwise, display no preview.
+  const activePreviewBuilding = resolvedSelectedBuilding || hoveredBuilding;
+  const isPreviewSelected = Boolean(resolvedSelectedBuilding);
 
   // Search & Filter state
   const [searchQuery, setSearchQuery] = useState('');
@@ -75,10 +92,13 @@ export default function CampusMap({
     return () => observer.disconnect();
   }, []);
 
-  // 3. Constraints helper: clamp image within viewport bounds
+  // 3. Constraints helper: clamp image within viewport bounds using cover scale (no black borders)
   const applyConstraints = useCallback((newX, newY, newScale, vWidth, vHeight) => {
-    const fitScale = Math.min(vWidth / IMG_WIDTH, vHeight / IMG_HEIGHT);
-    const minScale = fitScale;
+    if (!vWidth || !vHeight) return { x: 0, y: 0, scale: 1 };
+
+    // coverScale ensures the satellite orthophoto completely fills the viewport in both axes without letterboxing
+    const coverScale = Math.max(vWidth / IMG_WIDTH, vHeight / IMG_HEIGHT);
+    const minScale = coverScale;
     const maxScale = 6.0;
 
     const clampedScale = Math.max(minScale, Math.min(newScale, maxScale));
@@ -106,13 +126,13 @@ export default function CampusMap({
     return { x: finalX, y: finalY, scale: clampedScale };
   }, []);
 
-  // 4. Initial fit on mount
+  // 4. Initial fit on mount - covers viewport with satellite image centered
   const fitToScreen = useCallback(() => {
     if (viewportSize.width === 0 || viewportSize.height === 0) return;
-    const fitScale = Math.min(viewportSize.width / IMG_WIDTH, viewportSize.height / IMG_HEIGHT);
-    const cx = (viewportSize.width - IMG_WIDTH * fitScale) / 2;
-    const cy = (viewportSize.height - IMG_HEIGHT * fitScale) / 2;
-    setTransform({ x: cx, y: cy, scale: fitScale });
+    const coverScale = Math.max(viewportSize.width / IMG_WIDTH, viewportSize.height / IMG_HEIGHT);
+    const cx = (viewportSize.width - IMG_WIDTH * coverScale) / 2;
+    const cy = (viewportSize.height - IMG_HEIGHT * coverScale) / 2;
+    setTransform({ x: cx, y: cy, scale: coverScale });
   }, [viewportSize]);
 
   useEffect(() => {
@@ -145,8 +165,8 @@ export default function CampusMap({
         const pointerX = e.clientX - rect.left;
         const pointerY = e.clientY - rect.top;
 
-        const fitScale = Math.min(viewportSize.width / IMG_WIDTH, viewportSize.height / IMG_HEIGHT);
-        const clampedScale = Math.max(fitScale, Math.min(targetScale, 6.0));
+        const coverScale = Math.max(viewportSize.width / IMG_WIDTH, viewportSize.height / IMG_HEIGHT);
+        const clampedScale = Math.max(coverScale, Math.min(targetScale, 6.0));
 
         const x = pointerX - (pointerX - prev.x) * (clampedScale / prev.scale);
         const y = pointerY - (pointerY - prev.y) * (clampedScale / prev.scale);
@@ -162,6 +182,17 @@ export default function CampusMap({
   // 6. Pointer Panning handlers
   const handlePointerDown = (e) => {
     if (!interactive || e.button !== 0) return;
+    // Don't initiate viewport panning/capturing on polygons or interactive overlay components
+    if (
+      e.target.tagName === 'polygon' ||
+      e.target.closest('polygon') ||
+      e.target.closest(`.${styles.hoverTooltip}`) ||
+      e.target.closest(`.${styles.mapControlSurface}`) ||
+      e.target.closest(`.${styles.bottomControls}`) ||
+      e.target.closest(`.${styles.legendBox}`)
+    ) {
+      return;
+    }
     isDragging.current = true;
     didDragMove.current = false;
     dragStartPointer.current = { x: e.clientX, y: e.clientY };
@@ -217,9 +248,12 @@ export default function CampusMap({
   // 8. Focus smoothly on a specific logical building
   const focusBuilding = useCallback(
     (building) => {
-      if (!building || !viewportRef.current) return;
+      if (!building || !viewportRef.current || viewportSize.width === 0 || viewportSize.height === 0) return;
       const { centroid } = building;
-      const targetScale = 2.4;
+      if (!centroid || (centroid.x === 0 && centroid.y === 0)) return;
+
+      const coverScale = Math.max(viewportSize.width / IMG_WIDTH, viewportSize.height / IMG_HEIGHT);
+      const targetScale = Math.max(coverScale * 1.5, 2.2);
       const cx = viewportSize.width / 2;
       const cy = viewportSize.height / 2;
       const targetX = cx - centroid.x * targetScale;
@@ -236,6 +270,22 @@ export default function CampusMap({
     },
     [viewportSize, applyConstraints]
   );
+
+  // Expose imperative methods to parent components via ref
+  useImperativeHandle(ref, () => ({
+    focusBuilding,
+    fitToScreen,
+    clearHover: () => {
+      if (hoverLeaveTimerRef.current) {
+        clearTimeout(hoverLeaveTimerRef.current);
+        hoverLeaveTimerRef.current = null;
+      }
+      setHoveredBuilding(null);
+      if (onHoverBuilding) {
+        onHoverBuilding(null);
+      }
+    },
+  }), [focusBuilding, fitToScreen, onHoverBuilding]);
 
   // 9. Flatten all polygon geometries while tracking parent logical building
   const flatPolygons = useMemo(() => {
@@ -254,38 +304,140 @@ export default function CampusMap({
     return list;
   }, [buildings]);
 
-  // 10. Multi-polygon Hover & Click events
-  const handlePolygonPointerEnter = (building, e) => {
+  // 10. Building Screen Coordinates & Preview Card Position Calculation (anchored to active selected building)
+  const previewCardData = useMemo(() => {
+    if (!activePreviewBuilding || !activePreviewBuilding.centroid) return null;
+    const { width: vWidth, height: vHeight } = viewportSize;
+    if (vWidth === 0 || vHeight === 0) return null;
+
+    // Real screen coordinates reflecting current pan and zoom
+    const screenX = transform.x + activePreviewBuilding.centroid.x * transform.scale;
+    const screenY = transform.y + activePreviewBuilding.centroid.y * transform.scale;
+
+    // Avoid rendering card if building is scrolled far off-screen
+    if (screenX < -120 || screenX > vWidth + 120 || screenY < -120 || screenY > vHeight + 120) {
+      return null;
+    }
+
+    // Approximate building vertical visual radius on screen to keep card off roof
+    let approxRadiusY = 24 * transform.scale;
+    if (activePreviewBuilding.geometries && activePreviewBuilding.geometries.length > 0) {
+      const maxH = Math.max(...activePreviewBuilding.geometries.map((g) => g.bbox?.height || 40));
+      approxRadiusY = (maxH / 2) * transform.scale;
+    }
+    const clampedRadiusY = Math.min(Math.max(approxRadiusY, 20), 100);
+
+    const CARD_WIDTH = 280;
+    const CARD_HEIGHT = 145;
+    const MARGIN = 16;
+    const POINTER_GAP = 10;
+
+    // Center card horizontally on building screenX, clamped within viewport bounds
+    const minCardX = CARD_WIDTH / 2 + MARGIN;
+    const maxCardX = vWidth - CARD_WIDTH / 2 - MARGIN;
+    const cardX = Math.max(minCardX, Math.min(screenX, maxCardX));
+
+    // Pointer offset relative to card center so arrow points directly to building
+    const pointerOffset = screenX - cardX;
+    const clampedPointerOffset = Math.max(-CARD_WIDTH / 2 + 24, Math.min(pointerOffset, CARD_WIDTH / 2 - 24));
+
+    // Vertical placement: default ABOVE rooftop
+    let placement = 'above';
+    let cardY = screenY - clampedRadiusY - POINTER_GAP;
+
+    // If card would clip past top edge of viewport (or top toolbar area)
+    if (cardY - CARD_HEIGHT < 16) {
+      placement = 'below';
+      cardY = screenY + clampedRadiusY + POINTER_GAP;
+    }
+
+    // Clamp Y if placed below and near bottom
+    if (placement === 'below' && cardY + CARD_HEIGHT > vHeight - MARGIN) {
+      cardY = Math.max(MARGIN, vHeight - CARD_HEIGHT - MARGIN);
+    }
+
+    return {
+      x: Math.round(cardX),
+      y: Math.round(cardY),
+      placement,
+      pointerOffset: Math.round(clampedPointerOffset),
+    };
+  }, [activePreviewBuilding, transform, viewportSize]);
+
+  const hoverLeaveTimerRef = useRef(null);
+  const isPointerOnCardRef = useRef(false);
+
+  useEffect(() => {
+    if (!activePreviewBuilding) {
+      isPointerOnCardRef.current = false;
+    }
+  }, [activePreviewBuilding]);
+
+  // Multi-polygon Hover & Click events
+  const handlePolygonPointerEnter = (building) => {
+    // If pointer is currently interacting with the preview card, suppress polygon hover highlights
+    if (isPointerOnCardRef.current) return;
+
+    if (hoverLeaveTimerRef.current) {
+      clearTimeout(hoverLeaveTimerRef.current);
+      hoverLeaveTimerRef.current = null;
+    }
     setHoveredBuilding(building);
-    updateTooltipCoordinates(e);
     if (onHoverBuilding) {
       onHoverBuilding(building);
     }
   };
 
-  const handlePolygonPointerMove = (e) => {
-    updateTooltipCoordinates(e);
+  const handlePolygonPointerLeave = () => {
+    if (isPointerOnCardRef.current) return;
+
+    if (hoverLeaveTimerRef.current) {
+      clearTimeout(hoverLeaveTimerRef.current);
+    }
+    // Grace period so moving pointer from building onto its hover card does not flicker or disappear
+    hoverLeaveTimerRef.current = setTimeout(() => {
+      setHoveredBuilding(null);
+      if (onHoverBuilding) {
+        onHoverBuilding(null);
+      }
+    }, 180);
   };
 
-  const handlePolygonPointerLeave = () => {
-    setHoveredBuilding(null);
-    if (onHoverBuilding) {
-      onHoverBuilding(null);
+  const handleCardMouseEnter = () => {
+    isPointerOnCardRef.current = true;
+    if (hoverLeaveTimerRef.current) {
+      clearTimeout(hoverLeaveTimerRef.current);
+      hoverLeaveTimerRef.current = null;
+    }
+    // When a building is selected, suppress hover highlighting on all other polygons
+    // while the pointer is interacting with the floating preview card
+    if (resolvedSelectedBuilding) {
+      setHoveredBuilding(null);
+      if (onHoverBuilding) {
+        onHoverBuilding(null);
+      }
     }
   };
 
-  const updateTooltipCoordinates = (e) => {
-    if (!viewportRef.current) return;
-    const rect = viewportRef.current.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
-    const clampedX = Math.max(130, Math.min(x, rect.width - 130));
-    const clampedY = Math.max(80, Math.min(y, rect.height - 20));
-    setTooltipPos({ x: clampedX, y: clampedY });
+  const handleCardMouseLeave = () => {
+    isPointerOnCardRef.current = false;
+    if (!resolvedSelectedBuilding) {
+      if (hoverLeaveTimerRef.current) {
+        clearTimeout(hoverLeaveTimerRef.current);
+      }
+      hoverLeaveTimerRef.current = setTimeout(() => {
+        setHoveredBuilding(null);
+        if (onHoverBuilding) {
+          onHoverBuilding(null);
+        }
+      }, 150);
+    }
   };
 
   const handlePolygonClick = (building, e) => {
-    e.stopPropagation();
+    if (e && e.stopPropagation) {
+      e.stopPropagation();
+    }
     if (didDragMove.current) return;
     if (onSelectBuilding) {
       onSelectBuilding(building);
@@ -327,7 +479,7 @@ export default function CampusMap({
   // Polygon styling logic: Invisible by default, luminous only on hover or selection
   const getPolygonClass = (polygonItem) => {
     const parent = polygonItem.parentBuilding;
-    const isSelected = selectedBuildingId === parent.id;
+    const isSelected = (resolvedSelectedBuilding && resolvedSelectedBuilding.id === parent.id) || selectedBuildingId === parent.id;
     const isHovered = hoveredBuilding && hoveredBuilding.id === parent.id;
     const isDimmed = !filteredLogicalBuildings.some((f) => f.id === parent.id);
 
@@ -359,9 +511,21 @@ export default function CampusMap({
       onPointerMove={handlePointerMove}
       onPointerUp={handlePointerUp}
       onPointerCancel={handlePointerUp}
+      onPointerLeave={() => {
+        if (hoverLeaveTimerRef.current) {
+          clearTimeout(hoverLeaveTimerRef.current);
+          hoverLeaveTimerRef.current = null;
+        }
+        setHoveredBuilding(null);
+        if (onHoverBuilding) {
+          onHoverBuilding(null);
+        }
+      }}
       onClick={() => {
         if (didDragMove.current) return;
+        isPointerOnCardRef.current = false;
         if (onSelectBuilding) onSelectBuilding(null);
+        if (onClosePreview) onClosePreview();
         if (onHoverBuilding) onHoverBuilding(null);
       }}
       style={{ visibility: isInitialized ? 'visible' : 'hidden' }}
@@ -410,10 +574,15 @@ export default function CampusMap({
                   id={`polygon-ann-${poly.annotationId}`}
                   points={poly.pointsString}
                   className={getPolygonClass(poly)}
-                  onPointerEnter={(e) => handlePolygonPointerEnter(poly.parentBuilding, e)}
-                  onPointerMove={handlePolygonPointerMove}
+                  onPointerEnter={() => handlePolygonPointerEnter(poly.parentBuilding)}
                   onPointerLeave={handlePolygonPointerLeave}
-                  onClick={(e) => handlePolygonClick(poly.parentBuilding, e)}
+                  onPointerDown={(e) => {
+                    e.stopPropagation();
+                  }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handlePolygonClick(poly.parentBuilding, e);
+                  }}
                   tabIndex={0}
                   aria-label={poly.parentBuilding.name}
                   onKeyDown={(e) => {
@@ -428,44 +597,118 @@ export default function CampusMap({
         </div>
       </div>
 
-      {/* Floating Hover Tooltip */}
-      {hoveredBuilding && (
+      {/* Floating Building Preview Card for Active Building (Selected or Hover Priority) */}
+      {activePreviewBuilding && previewCardData && (
         <div
-          className={styles.hoverTooltip}
+          className={`${styles.hoverTooltip} ${
+            previewCardData.placement === 'above' ? styles.tooltipAbove : styles.tooltipBelow
+          }`}
           style={{
-            left: `${tooltipPos.x}px`,
-            top: `${tooltipPos.y}px`,
+            left: `${previewCardData.x}px`,
+            top: `${previewCardData.y}px`,
           }}
-          aria-hidden="true"
+          onPointerDown={(e) => e.stopPropagation()}
+          onMouseEnter={handleCardMouseEnter}
+          onMouseLeave={handleCardMouseLeave}
+          onPointerEnter={handleCardMouseEnter}
+          onPointerLeave={handleCardMouseLeave}
+          onClick={(e) => {
+            e.stopPropagation();
+            if (!isPreviewSelected && onSelectBuilding) {
+              onSelectBuilding(activePreviewBuilding);
+            }
+          }}
+          role="region"
+          aria-label={`Preview for ${activePreviewBuilding.name}`}
         >
+          {/* Directional connector pointer pointing to building centroid */}
+          <div
+            className={`${styles.tooltipPointer} ${
+              previewCardData.placement === 'above' ? styles.pointerAbove : styles.pointerBelow
+            }`}
+            style={{
+              left: `calc(50% + ${previewCardData.pointerOffset}px)`,
+            }}
+          />
+
           <div className={styles.tooltipHeader}>
-            <span className={styles.tooltipTypeBadge}>{hoveredBuilding.type}</span>
-            <span
-              className={styles.tooltipStatusBadge}
-              style={{
-                color: (STATUS_META[hoveredBuilding.status] || STATUS_META.unknown).color,
-                background: (STATUS_META[hoveredBuilding.status] || STATUS_META.unknown).bg,
-                border: `1px solid ${(STATUS_META[hoveredBuilding.status] || STATUS_META.unknown).color}40`,
-              }}
-            >
-              {(STATUS_META[hoveredBuilding.status] || STATUS_META.unknown).label}
-            </span>
+            <div className={styles.headerLeft}>
+              <span className={styles.tooltipCode}>{activePreviewBuilding.id}</span>
+              <span className={styles.tooltipTypeBadge}>{activePreviewBuilding.type}</span>
+            </div>
+            <div className={styles.headerRight}>
+              <span
+                className={styles.tooltipStatusBadge}
+                style={{
+                  color: (STATUS_META[activePreviewBuilding.status] || STATUS_META.unknown).color,
+                  background: (STATUS_META[activePreviewBuilding.status] || STATUS_META.unknown).bg,
+                  border: `1px solid ${(STATUS_META[activePreviewBuilding.status] || STATUS_META.unknown).color}40`,
+                }}
+              >
+                <span
+                  className={styles.tooltipStatusDot}
+                  style={{ background: (STATUS_META[activePreviewBuilding.status] || STATUS_META.unknown).color }}
+                />
+                {(STATUS_META[activePreviewBuilding.status] || STATUS_META.unknown).label}
+              </span>
+              {isPreviewSelected && (
+                <button
+                  type="button"
+                  className={styles.tooltipCloseBtn}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    isPointerOnCardRef.current = false;
+                    if (onClosePreview) {
+                      onClosePreview();
+                    } else if (onSelectBuilding) {
+                      onSelectBuilding(null);
+                    }
+                  }}
+                  aria-label="Close preview"
+                  title="Close preview"
+                >
+                  &times;
+                </button>
+              )}
+            </div>
           </div>
 
-          <div className={styles.tooltipTitle}>{hoveredBuilding.name}</div>
+          <div className={styles.tooltipTitle}>{activePreviewBuilding.name}</div>
 
           <div className={styles.tooltipMetaRow}>
-            <span>📍 {hoveredBuilding.location}</span>
+            <span>📍 {activePreviewBuilding.location || 'Campus Grounds'}</span>
+            <span className={styles.metaDivider}>•</span>
+            <span>{activePreviewBuilding.hasTelemetry ? '🟢 Live IoT' : '🛰️ Monitored'}</span>
           </div>
 
-          <div className={styles.tooltipFooter}>
+          {activePreviewBuilding.description && (
+            <p className={styles.tooltipDesc}>
+              {activePreviewBuilding.description}
+            </p>
+          )}
+
+          <div
+            className={styles.tooltipFooter}
+            onClick={(e) => {
+              e.stopPropagation();
+              if (onSelectBuilding) {
+                onSelectBuilding(activePreviewBuilding);
+              }
+              if (onInspectBuilding) {
+                onInspectBuilding(activePreviewBuilding);
+              }
+            }}
+            role="button"
+            tabIndex={0}
+            title="Click to inspect facility in details panel"
+          >
             <span>Click to inspect facility →</span>
           </div>
         </div>
       )}
 
-      {/* Map Floating UI Toolbar: Search & Filters */}
-      <div className={styles.mapToolbar} onClick={(e) => e.stopPropagation()}>
+      {/* Map Floating UI Control Surface */}
+      <div className={styles.mapControlSurface} onClick={(e) => e.stopPropagation()}>
         <div className={styles.searchContainer}>
           <svg
             className={styles.searchIcon}
@@ -544,53 +787,53 @@ export default function CampusMap({
           )}
         </div>
 
-        {/* Operational Status Filter Chips */}
+        {/* Operational Status Filter Chips within Control Surface */}
         <div className={styles.filterRow}>
           <button
             className={`${styles.filterChip} ${statusFilter === 'all' ? styles.filterChipActive : ''}`}
             onClick={() => setStatusFilter('all')}
           >
-            All Buildings ({buildings.length})
+            All ({buildings.length})
           </button>
           <button
             className={`${styles.filterChip} ${statusFilter === 'operational' ? styles.filterChipActive : ''}`}
             onClick={() => setStatusFilter('operational')}
           >
             <span className={styles.filterDot} style={{ background: '#10b981' }} />
-            Operational ({buildings.filter((b) => b.status === 'operational').length})
+            Oper ({buildings.filter((b) => b.status === 'operational').length})
           </button>
           <button
             className={`${styles.filterChip} ${statusFilter === 'maintenance' ? styles.filterChipActive : ''}`}
             onClick={() => setStatusFilter('maintenance')}
           >
             <span className={styles.filterDot} style={{ background: '#06b6d4' }} />
-            Maintenance ({buildings.filter((b) => b.status === 'maintenance').length})
+            Maint ({buildings.filter((b) => b.status === 'maintenance').length})
           </button>
           <button
             className={`${styles.filterChip} ${statusFilter === 'warning' ? styles.filterChipActive : ''}`}
             onClick={() => setStatusFilter('warning')}
           >
             <span className={styles.filterDot} style={{ background: '#f59e0b' }} />
-            Warning ({buildings.filter((b) => b.status === 'warning').length})
+            Warn ({buildings.filter((b) => b.status === 'warning').length})
           </button>
           <button
             className={`${styles.filterChip} ${statusFilter === 'critical' ? styles.filterChipActive : ''}`}
             onClick={() => setStatusFilter('critical')}
           >
             <span className={styles.filterDot} style={{ background: '#ef4444' }} />
-            Critical ({buildings.filter((b) => b.status === 'critical').length})
+            Crit ({buildings.filter((b) => b.status === 'critical').length})
           </button>
           <button
             className={`${styles.filterChip} ${statusFilter === 'unknown' ? styles.filterChipActive : ''}`}
             onClick={() => setStatusFilter('unknown')}
           >
             <span className={styles.filterDot} style={{ background: '#94a3b8' }} />
-            Unknown ({buildings.filter((b) => b.status === 'unknown').length})
+            Unk ({buildings.filter((b) => b.status === 'unknown').length})
           </button>
 
           {statusFilter !== 'all' && (
-            <button className={styles.clearFilterBtn} onClick={() => setStatusFilter('all')}>
-              Clear Filter &times;
+            <button className={styles.clearFilterBtn} onClick={() => setStatusFilter('all')} title="Reset status filter">
+              &times;
             </button>
           )}
         </div>
@@ -723,4 +966,6 @@ export default function CampusMap({
       )}
     </div>
   );
-}
+});
+
+export default CampusMap;

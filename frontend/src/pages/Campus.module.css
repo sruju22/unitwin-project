@@ -4,19 +4,21 @@
   display: flex;
   flex-direction: column;
   flex: 1;
+  height: calc(100svh - var(--header-h, 64px));
+  max-height: calc(100svh - var(--header-h, 64px));
   overflow: hidden;
   background: var(--bg-base);
 }
 
-/* ── Top bar ── */
+/* ── Consolidated Campus Toolbar ── */
 .topBar {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px 24px;
+  padding: 8px 20px;
+  min-height: 46px;
   border-bottom: 1px solid var(--border);
-  background: #FFFFFF;
-  box-shadow: var(--shadow-xs);
+  background: var(--bg-surface, #FFFFFF);
   gap: 16px;
   flex-shrink: 0;
   z-index: 10;
@@ -25,15 +27,25 @@
 .buildingLabel {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 8px;
+}
+
+.toolbarIcon {
+  font-size: 14px;
 }
 
 .blockName {
   font-family: var(--font-display);
-  font-size: 16px;
+  font-size: 13.5px;
   font-weight: 700;
   color: var(--text-heading);
   letter-spacing: -0.01em;
+  margin: 0;
+}
+
+.toolbarDivider {
+  color: var(--border-hover, #CBD5E1);
+  font-size: 11px;
 }
 
 .blockSub {
@@ -42,18 +54,17 @@
 }
 
 .liveTag {
-  font-size: 9px;
-  font-weight: 700;
+  font-size: 10.5px;
+  font-weight: 600;
   color: var(--status-success);
   background: var(--status-success-bg);
   border: 1px solid var(--status-success-border);
   padding: 2px 7px;
   border-radius: 99px;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
   display: inline-flex;
   align-items: center;
   gap: 4px;
+  margin-left: 4px;
 }
 
 .liveDot {
@@ -63,83 +74,115 @@
   background: var(--status-success);
 }
 
-/* Status Chips in Header */
 .topChips {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
 }
 
-.glassChip {
-  background: var(--bg-subtle);
+.chipSegmentGroup {
+  display: flex;
+  align-items: center;
+  background: var(--bg-subtle, #F8FAFC);
   border: 1px solid var(--border);
-  padding: 4px 10px;
+  border-radius: 8px;
+  padding: 2px;
+  gap: 2px;
+}
+
+.statusChipBtn {
+  background: transparent;
+  border: 1px solid transparent;
+  padding: 3px 8px;
   border-radius: 6px;
-  font-size: 11px;
+  font-size: 11.5px;
   color: var(--text-secondary);
   display: flex;
   align-items: center;
-  gap: 6px;
-}
-
-.glassChip strong {
-  color: var(--text-heading);
-  font-weight: 600;
-}
-
-.glassChipBtn {
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  padding: 5px 10px;
-  border-radius: 6px;
-  font-size: 11px;
-  color: var(--text-secondary);
-  display: flex;
-  align-items: center;
-  gap: 6px;
+  gap: 5px;
   cursor: pointer;
   transition: all 0.15s ease;
+  font-weight: 500;
 }
 
-.glassChipBtn:hover {
-  background: rgba(255, 255, 255, 0.1);
-  color: #ffffff;
-  border-color: rgba(255, 255, 255, 0.2);
+.statusChipBtn:hover {
+  background: var(--bg-hover, #F1F5F9);
+  color: var(--text-heading);
 }
 
 .chipBtnActive {
-  background: rgba(56, 189, 248, 0.2) !important;
-  border-color: #38bdf8 !important;
-  color: #38bdf8 !important;
-  box-shadow: 0 0 10px rgba(56, 189, 248, 0.25);
+  background: #FFFFFF !important;
+  border-color: var(--border) !important;
+  color: var(--text-heading) !important;
+  font-weight: 600 !important;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
+}
+
+.chipDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.chipCountBadge {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 4px;
+  border-radius: 4px;
+  background: rgba(15, 23, 42, 0.06);
+  color: var(--text-heading);
 }
 
 .analyticsTriggerBtn {
-  background: linear-gradient(135deg, rgba(6, 182, 212, 0.2), rgba(59, 130, 246, 0.3));
-  border: 1px solid rgba(56, 189, 248, 0.45);
-  color: #38bdf8;
+  background: var(--primary-blue, #2563EB);
+  border: 1px solid var(--primary-blue, #2563EB);
+  color: #FFFFFF;
   padding: 5px 12px;
   border-radius: 6px;
-  font-size: 11px;
-  font-weight: 700;
+  font-size: 11.5px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 6px;
   cursor: pointer;
   transition: all 0.15s ease;
-  margin-left: 4px;
+  box-shadow: 0 1px 2px rgba(37, 99, 235, 0.15);
 }
 
 .analyticsTriggerBtn:hover {
-  background: linear-gradient(135deg, rgba(6, 182, 212, 0.35), rgba(59, 130, 246, 0.45));
-  color: #ffffff;
-  border-color: #38bdf8;
-  transform: translateY(-1px);
+  background: var(--primary-blue-hover, #1D4ED8);
+  border-color: var(--primary-blue-hover, #1D4ED8);
 }
 
 /* ── Main content ── */
 .content {
   display: flex;
+  flex-direction: row;
   flex: 1;
+  min-height: 0;
   overflow: hidden;
   position: relative;
+  background: #0f172a;
+}
+
+.mapContainer {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  position: relative;
+  overflow: hidden;
+}
+
+.detailsPanelWrapper {
+  width: 420px;
+  height: 100%;
+  flex-shrink: 0;
+  padding: 12px 12px 12px 0;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  z-index: 40;
 }
 
 /* Floating Map HUD */
@@ -187,6 +230,15 @@
 
   .topChips {
     flex-wrap: wrap;
+  }
+
+  .detailsPanelWrapper {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    bottom: 12px;
+    width: min(400px, calc(100vw - 24px));
+    padding: 0;
   }
 }
 
