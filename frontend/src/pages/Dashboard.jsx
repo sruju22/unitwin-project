@@ -75,11 +75,15 @@ export default function Dashboard({ onNavigate }) {
     };
   }, []);
 
-  // Compute metrics from actual database collections
-  const totalBuildings = buildings.length || 10;
-  const activeBuildings = buildings.filter(
-    (b) => (b.status || '').toLowerCase() === 'active'
-  ).length || 10;
+  // Compute metrics from actual database collections or surveyed inventory
+  const totalBuildings = buildings.length || 21;
+  const activeBuildings = buildings.length
+    ? buildings.filter(
+        (b) =>
+          (b.status || '').toLowerCase() === 'active' ||
+          (b.status || '').toLowerCase() === 'operational'
+      ).length
+    : 21;
 
   const operationalBuildingsKPI = {
     id: 'buildings',
