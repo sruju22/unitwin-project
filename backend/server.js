@@ -28,18 +28,33 @@ app.use(express.json());
 
 // MongoDB Connection
 if (!MONGODB_URI) {
-  console.error('FATAL: MONGODB_URI environment variable is not defined in .env');
-  process.exit(1);
+  console.warn('NOTE: MONGODB_URI environment variable is not defined in .env');
+  console.warn('Unitwin Backend running in standalone mode (database: disconnected).');
+} else {
+  mongoose
+    .connect(MONGODB_URI)
+    .then(() => {
+      console.log(`Connected to MongoDB Atlas: database "${mongoose.connection.db.databaseName}"`);
+    })
+    .catch((err) => {
+      console.error('MongoDB Atlas connection error:', err.message);
+    });
 }
 
-mongoose
-  .connect(MONGODB_URI)
-  .then(() => {
-    console.log(`Connected to MongoDB Atlas: database "${mongoose.connection.db.databaseName}"`);
-  })
-  .catch((err) => {
-    console.error('MongoDB Atlas connection error:', err.message);
-  });
+// API Routes with standalone support
+app.use('/api/buildings', buildingsRouter);
+
+// Database connectivity guard for database-exclusive /api routes
+app.use('/api', (req, res, next) => {
+  if (mongoose.connection.readyState !== 1) {
+    return res.status(503).json({
+      success: false,
+      connected: false,
+      error: 'Database disconnected. Please configure MONGODB_URI in backend/.env',
+    });
+  }
+  next();
+});
 
 // Root Health Endpoint
 app.get('/', (req, res) => {
@@ -53,9 +68,6 @@ app.get('/', (req, res) => {
     database: dbStatus,
   });
 });
-
-// API Routes
-app.use('/api/buildings', buildingsRouter);
 app.use('/api/rooms', roomsRouter);
 app.use('/api/timetables', timetablesRouter);
 app.use('/api/sections', sectionsRouter);
