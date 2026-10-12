@@ -40,8 +40,8 @@
 
 /* Polygons will use this class once coordinates are mapped */
 .interactivePolygon {
-  fill: rgba(0, 229, 255, 0.0);
-  stroke: rgba(0, 229, 255, 0.0);
+  fill: rgba(52, 120, 201, 0.0);
+  stroke: rgba(52, 120, 201, 0.0);
   stroke-width: 3;
   stroke-linejoin: round;
   cursor: pointer;
@@ -50,8 +50,8 @@
 }
 
 .interactivePolygon:hover {
-  fill: rgba(0, 229, 255, 0.15); /* Unitwin cyan highlight */
-  stroke: rgba(0, 229, 255, 0.8);
+  fill: var(--primary-blue-subtle); /* Unitwin institutional blue highlight */
+  stroke: var(--primary-blue);
 }
 
 /* Subtle optical lens vignette to ground the viewport as a camera aperture */

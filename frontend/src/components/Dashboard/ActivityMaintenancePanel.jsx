@@ -8,7 +8,7 @@ const ACTIVITIES = [
     message: 'Lecture Hall C101 — occupancy peaked at 88% (62/70 present)',
     time: '4 min ago',
     badge: 'Occupancy',
-    color: '#38bdf8',
+    color: '#2563EB',
   },
   {
     id: 'act2',
@@ -16,7 +16,7 @@ const ACTIVITIES = [
     message: 'Solar PV array output: 48.2 kW — midday peak generation',
     time: '12 min ago',
     badge: 'Solar PV',
-    color: '#10b981',
+    color: '#475569',
   },
   {
     id: 'act3',
@@ -24,7 +24,7 @@ const ACTIVITIES = [
     message: 'Work order #WO-4821 closed — Elevator B sensor re-calibrated',
     time: '28 min ago',
     badge: 'Work Order',
-    color: '#f59e0b',
+    color: '#2563EB',
   },
   {
     id: 'act4',
@@ -32,7 +32,7 @@ const ACTIVITIES = [
     message: 'High pedestrian congestion detected at Central Library entrance',
     time: '42 min ago',
     badge: 'Pedestrian',
-    color: '#f43f5e',
+    color: '#D97706',
   },
   {
     id: 'act5',
@@ -40,7 +40,7 @@ const ACTIVITIES = [
     message: 'HVAC chiller setpoint adjusted for Block C Floor 2',
     time: '56 min ago',
     badge: 'Automation',
-    color: '#14b8a6',
+    color: '#475569',
   },
 ];
 
@@ -120,7 +120,7 @@ export default function ActivityMaintenancePanel() {
         {filtered.map(act => (
           <div key={act.id} className={styles.activityItem}>
             <div className={styles.dotLineCol}>
-              <span className={styles.dot} style={{ background: act.color, boxShadow: `0 0 6px ${act.color}` }} />
+              <span className={styles.dot} style={{ background: act.color }} />
               <div className={styles.verticalLine} />
             </div>
 

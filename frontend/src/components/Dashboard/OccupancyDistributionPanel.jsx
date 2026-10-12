@@ -114,7 +114,7 @@ export default function OccupancyDistributionPanel({ onNavigateToCampus }) {
                       style={{
                         width: `${b.occupancy}%`,
                         backgroundColor:
-                          b.occupancy > 90 ? '#f43f5e' : b.occupancy > 75 ? '#f59e0b' : '#10b981',
+                          b.occupancy > 90 ? '#DC2626' : b.occupancy > 75 ? '#D97706' : '#16A34A',
                       }}
                     />
                   </div>
@@ -179,7 +179,7 @@ export default function OccupancyDistributionPanel({ onNavigateToCampus }) {
                     style={{
                       width: `${room.utilization}%`,
                       backgroundColor:
-                        room.utilization > 85 ? '#f43f5e' : room.utilization >= 60 ? '#38bdf8' : '#10b981',
+                        room.utilization > 85 ? '#DC2626' : room.utilization >= 60 ? '#2563EB' : '#16A34A',
                     }}
                   />
                 </div>

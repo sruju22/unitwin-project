@@ -1,5 +1,5 @@
 .panel {
-  background: linear-gradient(180deg, rgba(22, 26, 37, 0.8) 0%, rgba(14, 17, 25, 0.88) 100%);
+  background: var(--bg-surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   padding: 18px 20px;
@@ -9,15 +9,13 @@
   position: relative;
   overflow: hidden;
   box-shadow: var(--shadow-sm);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
   transition: border-color var(--transition), box-shadow var(--transition);
   height: 100%;
 }
 
 .panel:hover {
-  border-color: rgba(20, 184, 166, 0.3);
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+  border-color: #D0D5DD;
+  box-shadow: var(--shadow-md);
 }
 
 .header {
@@ -38,12 +36,12 @@
   width: 30px;
   height: 30px;
   border-radius: var(--radius-sm);
-  background: rgba(244, 63, 94, 0.12);
-  color: #f43f5e;
+  background: var(--status-danger-bg);
+  color: var(--status-danger);
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 1px solid rgba(244, 63, 94, 0.25);
+  border: 1px solid var(--status-danger-border);
 }
 
 .chipPulse {
@@ -54,23 +52,23 @@
   font-family: var(--font-display);
   font-size: 14px;
   font-weight: 700;
-  color: var(--text-primary);
+  color: var(--text-heading);
   margin: 0;
   letter-spacing: -0.01em;
 }
 
 .subtitle {
-  font-size: 11px;
-  color: var(--text-muted);
+  font-size: 11.5px;
+  color: var(--text-secondary);
   margin: 1px 0 0;
 }
 
 .activePill {
   font-size: 9px;
   font-weight: 700;
-  color: #f43f5e;
-  background: rgba(244, 63, 94, 0.12);
-  border: 1px solid rgba(244, 63, 94, 0.3);
+  color: var(--status-danger);
+  background: var(--status-danger-bg);
+  border: 1px solid var(--status-danger-border);
   padding: 2px 7px;
   border-radius: 99px;
   text-transform: uppercase;
@@ -79,9 +77,9 @@
 .nominalPill {
   font-size: 9px;
   font-weight: 700;
-  color: #10b981;
-  background: rgba(16, 185, 129, 0.12);
-  border: 1px solid rgba(16, 185, 129, 0.3);
+  color: var(--status-success);
+  background: var(--status-success-bg);
+  border: 1px solid var(--status-success-border);
   padding: 2px 7px;
   border-radius: 99px;
   text-transform: uppercase;
@@ -89,9 +87,9 @@
 
 /* Feedback Banner */
 .feedbackBanner {
-  background: rgba(20, 184, 166, 0.1);
-  border: 1px solid rgba(20, 184, 166, 0.3);
-  color: #2dd4bf;
+  background: var(--status-success-bg);
+  border: 1px solid var(--status-success-border);
+  color: var(--status-success);
   font-size: 10.5px;
   font-weight: 500;
   padding: 6px 10px;
@@ -110,8 +108,8 @@
 }
 
 .alertCard {
-  background: rgba(13, 15, 20, 0.45);
-  border: 1px solid rgba(255, 255, 255, 0.04);
+  background: #F8FAFC;
+  border: 1px solid var(--border);
   border-left-width: 3px;
   border-radius: var(--radius-sm);
   padding: 12px 14px;
@@ -122,13 +120,13 @@
 }
 
 .alertCard:hover {
-  background: rgba(13, 15, 20, 0.65);
-  border-color: rgba(255, 255, 255, 0.08);
+  background: #F1F5F9;
+  border-color: #D0D5DD;
 }
 
 .cardAck {
   opacity: 0.6;
-  border-left-color: #64748b !important;
+  border-left-color: #98A2B3 !important;
 }
 
 .cardHeader {
@@ -175,13 +173,13 @@
 .alertTitle {
   font-size: 12.5px;
   font-weight: 600;
-  color: var(--text-primary);
+  color: var(--text-heading);
   margin: 0;
 }
 
 .alertDetail {
   font-size: 11px;
-  color: var(--text-muted);
+  color: var(--text-secondary);
   margin: 0;
   line-height: 1.4;
 }
@@ -194,13 +192,13 @@
   gap: 6px;
   margin-top: 2px;
   padding-top: 6px;
-  border-top: 1px solid rgba(255, 255, 255, 0.04);
+  border-top: 1px solid var(--border);
 }
 
 .ackBtn {
-  background: transparent;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  color: var(--text-muted);
+  background: #FFFFFF;
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
   font-size: 10px;
   font-weight: 600;
   padding: 3px 8px;
@@ -213,20 +211,20 @@
 }
 
 .ackBtn:hover {
-  background: rgba(255, 255, 255, 0.04);
-  color: var(--text-primary);
+  background: #F4F6F9;
+  color: var(--text-heading);
 }
 
 .ackBtnActive {
-  border-color: rgba(16, 185, 129, 0.35);
-  color: #10b981;
-  background: rgba(16, 185, 129, 0.08);
+  border-color: var(--status-success-border);
+  color: var(--status-success);
+  background: var(--status-success-bg);
 }
 
 .primaryActionBtn {
-  background: rgba(20, 184, 166, 0.12);
-  border: 1px solid rgba(20, 184, 166, 0.3);
-  color: #2dd4bf;
+  background: var(--primary-blue);
+  border: 1px solid var(--primary-blue-hover);
+  color: #FFFFFF;
   font-size: 10px;
   font-weight: 600;
   padding: 3px 10px;
@@ -236,17 +234,16 @@
 }
 
 .primaryActionBtn:hover {
-  background: rgba(20, 184, 166, 0.22);
-  color: #f8fafc;
-  transform: translateY(-1px);
+  background: var(--primary-blue-hover);
+  color: #FFFFFF;
 }
 
 .viewMoreBtn {
   background: transparent;
   border: none;
-  color: var(--text-muted);
+  color: var(--primary-blue);
   font-size: 11px;
-  font-weight: 500;
+  font-weight: 600;
   padding: 4px 0;
   display: flex;
   align-items: center;
@@ -258,7 +255,7 @@
 }
 
 .viewMoreBtn:hover {
-  color: #2dd4bf;
+  color: var(--navy);
 }
 
 /* All Systems Nominal Empty State */
@@ -266,9 +263,9 @@
   display: flex;
   align-items: center;
   gap: 16px;
-  background: rgba(13, 15, 20, 0.45);
-  border: 1px solid rgba(16, 185, 129, 0.18);
-  border-left: 3px solid #10b981;
+  background: #F8FAFC;
+  border: 1px solid var(--status-success-border);
+  border-left: 3px solid var(--status-success);
   border-radius: var(--radius-sm);
   padding: 18px 20px;
   margin: 4px 0;
@@ -278,9 +275,9 @@
   width: 42px;
   height: 42px;
   border-radius: var(--radius-sm);
-  background: rgba(16, 185, 129, 0.1);
-  border: 1px solid rgba(16, 185, 129, 0.25);
-  color: #10b981;
+  background: var(--status-success-bg);
+  border: 1px solid var(--status-success-border);
+  color: var(--status-success);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -297,14 +294,13 @@
   font-family: var(--font-display);
   font-size: 13.5px;
   font-weight: 600;
-  color: var(--text-primary);
+  color: var(--text-heading);
   margin: 0;
 }
 
 .nominalDetail {
   font-size: 11px;
-  color: var(--text-muted);
+  color: var(--text-secondary);
   line-height: 1.45;
   margin: 0;
 }
-

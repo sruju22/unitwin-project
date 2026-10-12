@@ -100,8 +100,8 @@ export default function Sidebar({ activePage, onNavigate, collapsed, onToggle, a
             <path d="M2 12l10 5 10-5" stroke="url(#grad)" strokeWidth="2" strokeLinecap="round" />
             <defs>
               <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" stopColor="#2979ff" />
-                <stop offset="100%" stopColor="#00e5ff" />
+                <stop offset="0%" stopColor="#2563EB" />
+                <stop offset="100%" stopColor="#60A5FA" />
               </linearGradient>
             </defs>
           </svg>

@@ -12,6 +12,10 @@ const alertsRouter = require('./routes/alerts');
 const energyUsageRouter = require('./routes/energyUsage');
 const occupancyRouter = require('./routes/occupancy');
 const insightsRouter = require('./routes/insights');
+const congestionRouter = require('./routes/congestion');
+const maintenanceRouter = require('./routes/maintenance');
+const solarRouter = require('./routes/solar');
+const aiRouter = require('./routes/ai');
 
 const app = express();
 const PORT = process.env.PORT || 5001;
@@ -20,7 +24,7 @@ const MONGODB_URI = process.env.MONGODB_URI;
 // Middleware
 app.use(
   cors({
-    origin: ['http://localhost:5173', 'http://127.0.0.1:5173', 'http://localhost:3000'],
+    origin: ['http://localhost:5173', 'http://127.0.0.1:5173', 'http://localhost:5174', 'http://localhost:3000'],
     credentials: true,
   })
 );
@@ -64,6 +68,13 @@ app.use('/api/alerts', alertsRouter);
 app.use('/api/energy-usage', energyUsageRouter);
 app.use('/api/occupancy', occupancyRouter);
 app.use('/api/insights', insightsRouter);
+app.use('/api/congestion', congestionRouter);
+app.use('/api/maintenance', maintenanceRouter);
+app.use('/api/maintainence', maintenanceRouter);
+app.use('/api/solar-generation', solarRouter);
+app.use('/api/solar', solarRouter);
+app.use('/api/ai', aiRouter);
+app.use('/api/chat', aiRouter);
 
 // 404 Catch-All
 app.use((req, res) => {

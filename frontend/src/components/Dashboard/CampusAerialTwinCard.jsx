@@ -90,7 +90,7 @@ export default function CampusAerialTwinCard({
         {/* Verified Glass Status Chips */}
         <div className={styles.chipsOverlay}>
           <div className={styles.glassChip}>
-            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#2dd4bf" strokeWidth="2">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <polygon points="3 9 12 2 21 9 21 20 3 20" />
               <polyline points="9 22 9 12 12 19" />
             </svg>

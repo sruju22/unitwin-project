@@ -12,14 +12,14 @@
   gap: 5px;
   font-size: 11px;
   font-weight: 500;
-  color: var(--text-muted);
+  color: var(--text-secondary);
   white-space: nowrap;
 }
 
 .pills {
   display: flex;
   gap: 2px;
-  background: var(--bg-elevated);
+  background: var(--bg-subtle);
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   padding: 3px;
@@ -27,22 +27,24 @@
 
 .pill {
   font-family: var(--font-display);
-  font-size: 12px;
+  font-size: 11.5px;
   font-weight: 600;
-  padding: 5px 14px;
-  border-radius: 6px;
+  padding: 4px 12px;
+  border-radius: 4px;
   background: transparent;
   color: var(--text-secondary);
   transition: background var(--transition), color var(--transition), box-shadow var(--transition);
+  border: 1px solid transparent;
 }
 
 .pill:hover {
-  color: var(--text-primary);
+  color: var(--text-heading);
   background: var(--bg-hover);
 }
 
 .pill.active {
-  background: rgba(41, 121, 255, 0.2);
-  color: #00e5ff;
-  box-shadow: 0 0 8px rgba(0, 229, 255, 0.15);
+  background: #FFFFFF;
+  color: var(--primary-blue);
+  border-color: var(--border);
+  box-shadow: var(--shadow-xs);
 }

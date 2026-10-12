@@ -292,7 +292,7 @@ export default function RoomInfoPanel({
       {/* Panel Header */}
       <div className={styles.header}>
         <div className={styles.buildingIcon}>
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2dd4bf" strokeWidth="2">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <polygon points="3 9 12 2 21 9 21 20 3 20" />
             <polyline points="9 22 9 12 15 12 15 22" />
           </svg>

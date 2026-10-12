@@ -20,6 +20,12 @@ router.get('/', async (req, res, next) => {
         filter.prototype = true;
       }
     }
+    if (req.query.asOfDate) {
+      const parsedDate = new Date(req.query.asOfDate);
+      if (!isNaN(parsedDate.getTime())) {
+        filter.timestamp = { ...(filter.timestamp || {}), $lte: parsedDate };
+      }
+    }
 
     const limit = parseInt(req.query.limit, 10) || 500;
     const [records, latestDoc, timelineAgg] = await Promise.all([
@@ -40,9 +46,13 @@ router.get('/', async (req, res, next) => {
     ]);
 
     let summary = null;
-    if (latestDoc.length > 0) {
-      const latestTime = latestDoc[0].timestamp;
-      const latestSlice = await db
+    let latestSlice = null;
+    if (timelineAgg.length > 0) {
+      // Prefer latest comprehensive snapshot (roomCount >= 50) on or before cutoff
+      const fullSnapshots = timelineAgg.filter((t) => t.roomCount >= 50);
+      const targetSnapshot = fullSnapshots.length > 0 ? fullSnapshots[fullSnapshots.length - 1] : timelineAgg[timelineAgg.length - 1];
+      const latestTime = targetSnapshot._id.timestamp;
+      latestSlice = await db
         .collection('occupancy')
         .find({ ...filter, timestamp: latestTime })
         .toArray();
@@ -75,11 +85,13 @@ router.get('/', async (req, res, next) => {
       };
     }
 
+    const dataToReturn = latestSlice && latestSlice.length > 0 ? latestSlice : records;
+
     res.json({
       success: true,
-      count: records.length,
+      count: dataToReturn.length,
       summary,
-      data: records,
+      data: dataToReturn,
     });
   } catch (err) {
     next(err);

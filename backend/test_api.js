@@ -59,6 +59,10 @@ async function runTests() {
     { name: 'List Energy Telemetry', path: '/api/energy-usage' },
     { name: 'List Occupancy Data', path: '/api/occupancy' },
     { name: 'List Campus Insights', path: '/api/insights' },
+    { name: 'List Congestion Data', path: '/api/congestion' },
+    { name: 'List Maintenance Data', path: '/api/maintenance' },
+    { name: 'List Solar Generation Data', path: '/api/solar-generation' },
+    { name: 'Get Solar Generation Summary', path: '/api/solar-generation/summary' },
   ];
 
   for (const tc of testCases) {

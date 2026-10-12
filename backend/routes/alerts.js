@@ -14,11 +14,23 @@ router.get('/', async (req, res, next) => {
     if (req.query.status) {
       filter.status = new RegExp(`^${req.query.status}$`, 'i');
     }
+    if (req.query.buildingId) {
+      filter.buildingId = req.query.buildingId;
+    }
+    if (req.query.alertType) {
+      filter.alertType = new RegExp(`^${req.query.alertType}$`, 'i');
+    }
     if (req.query.prototype !== undefined) {
       if (req.query.prototype === 'false') {
         filter.prototype = { $ne: true };
       } else {
         filter.prototype = true;
+      }
+    }
+    if (req.query.asOfDate) {
+      const parsedDate = new Date(req.query.asOfDate);
+      if (!isNaN(parsedDate.getTime())) {
+        filter.timestamp = { ...(filter.timestamp || {}), $lte: parsedDate };
       }
     }
 

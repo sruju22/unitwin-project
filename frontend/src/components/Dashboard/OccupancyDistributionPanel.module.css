@@ -1,5 +1,5 @@
 .panel {
-  background: linear-gradient(180deg, rgba(24, 28, 38, 0.75) 0%, rgba(19, 22, 31, 0.85) 100%);
+  background: var(--bg-surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   padding: 18px 20px;
@@ -8,14 +8,14 @@
   gap: 14px;
   position: relative;
   overflow: hidden;
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.3);
-  backdrop-filter: blur(12px);
-  transition: border-color var(--transition);
+  box-shadow: var(--shadow-sm);
+  transition: border-color var(--transition), box-shadow var(--transition);
   height: 100%;
 }
 
 .panel:hover {
-  border-color: rgba(20, 184, 166, 0.3);
+  border-color: #D0D5DD;
+  box-shadow: var(--shadow-md);
 }
 
 .header {
@@ -36,49 +36,49 @@
   width: 32px;
   height: 32px;
   border-radius: var(--radius-sm);
-  background: rgba(16, 185, 129, 0.12);
-  color: #10b981;
+  background: var(--status-success-bg);
+  color: var(--status-success);
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 1px solid rgba(16, 185, 129, 0.25);
+  border: 1px solid var(--status-success-border);
 }
 
 .title {
   font-family: var(--font-display);
   font-size: 14px;
   font-weight: 700;
-  color: var(--text-primary);
+  color: var(--text-heading);
   margin: 0;
   letter-spacing: -0.01em;
 }
 
 .subtitle {
-  font-size: 11px;
-  color: var(--text-muted);
+  font-size: 11.5px;
+  color: var(--text-secondary);
   margin: 2px 0 0;
 }
 
 .twinActionBtn {
-  background: linear-gradient(135deg, rgba(13, 148, 136, 0.2) 0%, rgba(20, 184, 166, 0.15) 100%);
-  border: 1px solid rgba(20, 184, 166, 0.35);
-  color: #2dd4bf;
+  background: var(--primary-blue);
+  border: 1px solid var(--primary-blue-hover);
+  color: #FFFFFF;
   font-family: var(--font-display);
   font-size: 11px;
-  font-weight: 700;
+  font-weight: 600;
   padding: 5px 12px;
   border-radius: 99px;
   display: flex;
   align-items: center;
   gap: 6px;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.15s ease;
+  box-shadow: var(--shadow-xs);
 }
 
 .twinActionBtn:hover {
-  background: linear-gradient(135deg, rgba(13, 148, 136, 0.35) 0%, rgba(20, 184, 166, 0.25) 100%);
-  border-color: #2dd4bf;
-  color: #f8fafc;
+  background: var(--primary-blue-hover);
+  color: #FFFFFF;
   transform: translateY(-1px);
 }
 
@@ -102,20 +102,20 @@
   justify-content: space-between;
   margin-bottom: 10px;
   padding-bottom: 6px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  border-bottom: 1px solid var(--border);
 }
 
 .subTitle {
   font-size: 11px;
   font-weight: 600;
   text-transform: uppercase;
-  color: var(--text-muted);
+  color: var(--text-secondary);
   letter-spacing: 0.05em;
 }
 
 .campusLoadBadge {
   font-size: 10.5px;
-  color: var(--text-muted);
+  color: var(--text-secondary);
 }
 
 /* Building Matrix */
@@ -131,8 +131,8 @@
 }
 
 .buildingRow {
-  background: rgba(13, 15, 20, 0.45);
-  border: 1px solid rgba(255, 255, 255, 0.04);
+  background: #F8FAFC;
+  border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   padding: 8px 12px;
   display: flex;
@@ -143,8 +143,8 @@
 }
 
 .buildingRow:hover {
-  background: rgba(13, 15, 20, 0.65);
-  border-color: rgba(255, 255, 255, 0.08);
+  background: #F1F5F9;
+  border-color: #D0D5DD;
 }
 
 .buildingMeta {
@@ -165,7 +165,7 @@
   font-family: var(--font-display);
   font-size: 11.5px;
   font-weight: 700;
-  color: var(--text-primary);
+  color: var(--text-heading);
 }
 
 .statusPill {
@@ -178,20 +178,20 @@
 }
 
 .statusPill.warning {
-  background: rgba(245, 158, 11, 0.12);
-  color: #fbbf24;
-  border: 1px solid rgba(245, 158, 11, 0.3);
+  background: var(--status-warning-bg);
+  color: var(--status-warning);
+  border: 1px solid var(--status-warning-border);
 }
 
 .statusPill.maintenance {
-  background: rgba(244, 63, 94, 0.12);
-  color: #f87171;
-  border: 1px solid rgba(244, 63, 94, 0.3);
+  background: var(--status-danger-bg);
+  color: var(--status-danger);
+  border: 1px solid var(--status-danger-border);
 }
 
 .buildingName {
   font-size: 11px;
-  color: var(--text-muted);
+  color: var(--text-secondary);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -213,17 +213,17 @@
 
 .occPercent {
   font-weight: 700;
-  color: var(--text-primary);
+  color: var(--text-heading);
   font-family: var(--font-display);
 }
 
 .sensorCount {
-  color: var(--text-muted);
+  color: var(--text-secondary);
 }
 
 .barTrack {
-  height: 3.5px;
-  background: rgba(255, 255, 255, 0.07);
+  height: 4px;
+  background: var(--border);
   border-radius: 2px;
   overflow: hidden;
 }
@@ -243,17 +243,17 @@
 .floorTabs {
   display: flex;
   gap: 3px;
-  background: rgba(13, 15, 20, 0.7);
-  padding: 2px;
+  background: var(--bg-subtle);
+  padding: 3px;
   border-radius: 6px;
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--border);
 }
 
 .floorBtn {
   background: transparent;
   border: none;
-  color: var(--text-muted);
-  font-size: 10px;
+  color: var(--text-secondary);
+  font-size: 10.5px;
   font-weight: 600;
   padding: 3px 8px;
   border-radius: 4px;
@@ -262,9 +262,10 @@
 }
 
 .floorBtnActive {
-  background: rgba(20, 184, 166, 0.2);
-  color: #2dd4bf;
-  border: 1px solid rgba(20, 184, 166, 0.35);
+  background: #FFFFFF;
+  color: var(--primary-blue);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-xs);
 }
 
 /* Floor Summary Strip */
@@ -272,11 +273,11 @@
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 8px;
-  background: rgba(13, 15, 20, 0.5);
+  background: #F8FAFC;
   padding: 7px 12px;
   border-radius: var(--radius-sm);
   margin-bottom: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border);
 }
 
 .statBox {
@@ -288,7 +289,7 @@
 .statLabel {
   font-size: 8.5px;
   font-weight: 600;
-  color: var(--text-muted);
+  color: var(--text-secondary);
   text-transform: uppercase;
 }
 
@@ -296,12 +297,12 @@
   font-family: var(--font-display);
   font-size: 13.5px;
   font-weight: 700;
-  color: var(--text-primary);
+  color: var(--text-heading);
 }
 
 .statUnit {
   font-size: 9.5px;
-  color: var(--text-muted);
+  color: var(--text-secondary);
   font-weight: 400;
 }
 
@@ -316,8 +317,8 @@
 }
 
 .roomCard {
-  background: rgba(13, 15, 20, 0.4);
-  border: 1px solid rgba(255, 255, 255, 0.04);
+  background: #F8FAFC;
+  border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   padding: 7px 10px;
   display: flex;
@@ -334,20 +335,20 @@
 .roomLabel {
   font-size: 11px;
   font-weight: 600;
-  color: var(--text-primary);
+  color: var(--text-heading);
 }
 
 .roomTypeTag {
   font-size: 8.5px;
-  color: var(--text-muted);
-  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-secondary);
+  background: #EEF2F6;
   padding: 1px 5px;
   border-radius: 3px;
 }
 
 .roomBarTrack {
-  height: 3px;
-  background: rgba(255, 255, 255, 0.07);
+  height: 3.5px;
+  background: var(--border);
   border-radius: 2px;
   overflow: hidden;
 }
@@ -365,10 +366,10 @@
 }
 
 .roomUtil {
-  color: #14b8a6;
+  color: var(--secondary-teal);
   font-weight: 600;
 }
 
 .roomCapacity {
-  color: var(--text-muted);
+  color: var(--text-secondary);
 }

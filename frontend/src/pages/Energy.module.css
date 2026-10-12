@@ -1,0 +1,522 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: 20px 24px;
+  max-width: 1720px;
+  margin: 0 auto;
+  width: 100%;
+  animation: fadeIn 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* Header Banner */
+.headerBanner {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 16px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  box-shadow: var(--shadow-sm);
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.titleRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.title {
+  font-family: var(--font-display);
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text-heading);
+  margin: 0;
+  letter-spacing: -0.015em;
+}
+
+.datasetTag {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: var(--primary-blue-subtle);
+  color: var(--primary-blue);
+  border: 1px solid var(--primary-blue-border);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.subtitle {
+  font-size: 12.5px;
+  color: var(--text-secondary);
+  margin: 4px 0 0;
+}
+
+.headerActions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.refreshBtn {
+  background: var(--bg-subtle);
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 600;
+  padding: 6px 14px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.15s ease;
+}
+
+.refreshBtn:hover {
+  background: var(--bg-card);
+  border-color: var(--border-hover);
+  color: var(--text-heading);
+}
+
+/* KPI Grid */
+.kpiGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  gap: 14px;
+}
+
+.kpiCard {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  box-shadow: var(--shadow-sm);
+  transition: all 0.2s ease;
+}
+
+.kpiCard:hover {
+  border-color: var(--border-hover);
+  box-shadow: var(--shadow-md);
+}
+
+.kpiLabel {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.kpiValueRow {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  margin: 2px 0;
+}
+
+.kpiValue {
+  font-family: var(--font-display);
+  font-size: 26px;
+  font-weight: 700;
+  color: var(--text-heading);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+
+.kpiUnit {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.kpiSub {
+  font-size: 11.5px;
+  color: var(--text-secondary);
+}
+
+/* Main Grid Layout */
+.gridTwoCol {
+  display: grid;
+  grid-template-columns: 1.25fr 1fr;
+  gap: 16px;
+}
+
+@media (max-width: 1100px) {
+  .gridTwoCol {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Card Panel */
+.panel {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 18px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  box-shadow: var(--shadow-sm);
+}
+
+.panelHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.panelTitle {
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-heading);
+  margin: 0;
+}
+
+.panelSubtitle {
+  font-size: 11.5px;
+  color: var(--text-secondary);
+  margin: 2px 0 0;
+}
+
+.panelBadge {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 99px;
+  background: var(--primary-blue-subtle);
+  color: var(--primary-blue);
+  border: 1px solid var(--primary-blue-border);
+}
+
+/* Daily Comparison Table */
+.tableWrap {
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 12.5px;
+}
+
+.table th {
+  padding: 9px 12px;
+  font-size: 10.5px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-secondary);
+  background: var(--bg-subtle);
+  border-bottom: 1px solid var(--border);
+}
+
+.table td {
+  padding: 11px 12px;
+  border-bottom: 1px solid var(--border);
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+.table tr:hover td {
+  background: var(--bg-subtle);
+}
+
+.dateCell {
+  font-weight: 600;
+  color: var(--text-heading);
+}
+
+.offsetPill {
+  display: inline-block;
+  padding: 2px 7px;
+  border-radius: 99px;
+  font-size: 11px;
+  font-weight: 600;
+  background: var(--status-success-subtle);
+  color: var(--status-success);
+  border: 1px solid var(--status-success-border);
+}
+
+/* Solar Panels Grid */
+.panelsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 10px;
+}
+
+.panelCard {
+  background: var(--bg-subtle);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  transition: all 0.15s ease;
+}
+
+.panelCard:hover {
+  background: var(--bg-card);
+  border-color: var(--border-hover);
+  box-shadow: var(--shadow-sm);
+}
+
+.panelCardHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.panelId {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-heading);
+}
+
+.panelDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--status-success);
+}
+
+.panelOutput {
+  font-family: var(--font-display);
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-top: 2px;
+}
+
+.panelCapacity {
+  font-size: 10.5px;
+  color: var(--text-secondary);
+}
+
+/* Appliance Load Strip */
+.applianceList {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  flex: 1;
+}
+
+.applianceItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  background: var(--bg-subtle);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  gap: 12px;
+}
+
+.applianceName {
+  font-weight: 600;
+  color: var(--text-heading);
+  font-size: 13px;
+}
+
+.applianceMeta {
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+.appliancePower {
+  font-family: var(--font-display);
+  font-weight: 700;
+  color: var(--text-primary);
+  font-size: 14px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Alarms Feed inside Energy Page */
+.alarmList {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  flex: 1;
+  min-height: 0;
+  max-height: 480px;
+  overflow-y: auto;
+  padding-right: 6px;
+}
+
+.alarmList::-webkit-scrollbar {
+  width: 5px;
+}
+
+.alarmList::-webkit-scrollbar-track {
+  background: var(--bg-subtle);
+  border-radius: 3px;
+}
+
+.alarmList::-webkit-scrollbar-thumb {
+  background: #CBD5E1;
+  border-radius: 3px;
+}
+
+.alarmList::-webkit-scrollbar-thumb:hover {
+  background: #94A3B8;
+}
+
+.alarmItem {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px 14px;
+  background: var(--bg-subtle);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--primary-blue);
+  border-radius: var(--radius-sm);
+  font-size: 12.5px;
+  flex-shrink: 0;
+  transition: all 0.15s ease;
+}
+
+.alarmItem:hover {
+  border-color: #CBD5E1;
+  background: var(--bg-card);
+}
+
+.alarmItemWarning {
+  border-left-color: var(--status-warning);
+}
+
+.alarmItemCritical {
+  border-left-color: var(--status-critical);
+}
+
+.alarmItemLow {
+  border-left-color: var(--secondary-teal);
+}
+
+.alarmHeaderRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.alarmTypeTag {
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  padding: 2px 7px;
+  border-radius: 4px;
+  background: var(--primary-blue-subtle);
+  color: var(--primary-blue);
+  border: 1px solid var(--primary-blue-border);
+  letter-spacing: 0.03em;
+}
+
+.alarmTypeTagCritical {
+  background: var(--status-critical-subtle);
+  color: var(--status-critical);
+  border-color: var(--status-critical-border);
+}
+
+.alarmTypeTagWarning {
+  background: var(--status-warning-subtle);
+  color: var(--status-warning);
+  border-color: var(--status-warning-border);
+}
+
+.alarmTypeTagLow {
+  background: var(--secondary-teal-subtle);
+  color: var(--secondary-teal);
+  border-color: var(--secondary-teal-border);
+}
+
+.alarmIdBadge {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.alarmTime {
+  font-size: 11px;
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.alarmCardTitle {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text-heading);
+  margin: 0;
+  line-height: 1.35;
+}
+
+.alarmMsg {
+  color: var(--text-primary);
+  line-height: 1.45;
+  margin: 0;
+  font-size: 12px;
+  word-break: break-word;
+}
+
+.alarmAction {
+  font-size: 11.5px;
+  color: var(--text-secondary);
+  background: #FFFFFF;
+  padding: 7px 10px;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+  line-height: 1.4;
+  word-break: break-word;
+}
+
+.actionLabel {
+  color: var(--text-heading);
+}
+
+.alarmFooterMeta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  font-size: 10.5px;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  margin-top: 2px;
+  padding-top: 4px;
+  border-top: 1px dashed var(--border);
+}
+
+.alarmListFooter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  font-size: 11px;
+  color: var(--text-secondary);
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+  margin-top: auto;
+}

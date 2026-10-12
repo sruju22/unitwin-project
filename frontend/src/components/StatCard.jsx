@@ -43,19 +43,19 @@ export default function StatCard({
     const areaPath = `${strokePath} L ${w},${h} L 0,${h} Z`;
 
     const accentColors = {
-      blue: '#38bdf8',
-      green: '#10b981',
-      orange: '#f59e0b',
-      red: '#f43f5e',
-      teal: '#14b8a6',
+      blue: '#2563EB',
+      green: '#16A34A',
+      orange: '#D97706',
+      red: '#DC2626',
+      teal: '#2563EB',
     };
-    const strokeColor = accentColors[accent] || '#14b8a6';
+    const strokeColor = accentColors[accent] || '#2563EB';
 
     return (
       <svg className={styles.sparkline} width={w} height={h} viewBox={`0 0 ${w} ${h}`} aria-hidden="true">
         <defs>
           <linearGradient id={`spark-grad-${accent}-${index}`} x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor={strokeColor} stopOpacity="0.25" />
+            <stop offset="0%" stopColor={strokeColor} stopOpacity="0.18" />
             <stop offset="100%" stopColor={strokeColor} stopOpacity="0.0" />
           </linearGradient>
         </defs>
@@ -121,8 +121,6 @@ export default function StatCard({
         )}
       </div>
 
-      {/* Subtle bottom accent line */}
-      <div className={`${styles.glowBar} ${styles[accent]}`} />
     </div>
   );
 }

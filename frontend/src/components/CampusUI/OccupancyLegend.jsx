@@ -1,10 +1,10 @@
 import styles from './OccupancyLegend.module.css';
 
 const LEVELS = [
-  { key: 'low',      label: 'Low',      detail: '< 60%',    color: '#2979ff' },
-  { key: 'moderate', label: 'Moderate',  detail: '60 – 80%', color: '#ffb547' },
-  { key: 'high',     label: 'High',      detail: '> 80%',    color: '#ff4f6d' },
-  { key: 'nodata',   label: 'No Data',   detail: '—',        color: '#3a3f55' },
+  { key: 'low',      label: 'Low',      detail: '< 60%',    color: '#10B981' },
+  { key: 'moderate', label: 'Moderate',  detail: '60 – 80%', color: '#F59E0B' },
+  { key: 'high',     label: 'High',      detail: '> 80%',    color: '#EF4444' },
+  { key: 'nodata',   label: 'No Data',   detail: '—',        color: '#94A3B8' },
 ];
 
 export default function OccupancyLegend() {

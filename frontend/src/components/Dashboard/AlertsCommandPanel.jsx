@@ -3,9 +3,9 @@ import { getAlerts } from '../../api/client';
 import styles from './AlertsCommandPanel.module.css';
 
 const SEVERITY_CONFIG = {
-  critical: { label: 'Critical', color: '#f43f5e', bg: 'rgba(244, 63, 94, 0.12)' },
-  warning:  { label: 'Warning',  color: '#f59e0b', bg: 'rgba(245, 158, 11, 0.12)' },
-  info:     { label: 'Info',     color: '#38bdf8', bg: 'rgba(56, 189, 248, 0.12)' },
+  critical: { label: 'Critical', color: '#DC2626', bg: 'rgba(220, 38, 38, 0.10)' },
+  warning:  { label: 'Warning',  color: '#D97706', bg: 'rgba(217, 119, 6, 0.10)' },
+  info:     { label: 'Info',     color: '#2563EB', bg: 'rgba(37, 99, 235, 0.10)' },
 };
 
 function normalizeSeverity(severity) {
@@ -136,7 +136,7 @@ export default function AlertsCommandPanel({ onNavigateToAlerts }) {
       {/* Action Feedback Banner */}
       {actionFeedback && (
         <div className={styles.feedbackBanner}>
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#2dd4bf" strokeWidth="2.5">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#16A34A" strokeWidth="2.5">
             <polyline points="20 6 9 17 4 12" />
           </svg>
           <span>{actionFeedback}</span>

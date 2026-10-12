@@ -1,74 +1,135 @@
 /* =========================================================
-   UNITWIN — Premium Dark Campus Digital Twin Design System
+   UNITWIN — Institutional Enterprise Campus Design System
    ========================================================= */
 
 :root {
-  /* --- Colour Palette: Deep Graphite with Muted Teal/Cyan Accents --- */
-  --bg-base:        #08090d;
-  --bg-surface:     #0e1118;
-  --bg-elevated:    #141722;
-  --bg-card:        #121520;
-  --bg-card-glass:  rgba(18, 21, 32, 0.72);
-  --bg-hover:       #191e2b;
+  /* --- Core Palette Tokens --- */
+  --bg-base:              #EEF2F7; /* Page background */
+  --bg-surface:           #FFFFFF; /* Card surface */
+  --bg-surface-light:     #FFFFFF;
+  --bg-elevated:          #FFFFFF;
+  --bg-card:              #FFFFFF;
+  --bg-card-glass:        rgba(255, 255, 255, 0.94);
+  --bg-hover:             #F1F5F9;
+  --bg-subtle:            #F8FAFC;
+  --bg-muted:             #E2E8F0;
+  --bg-input:             #FFFFFF;
 
-  /* Subtle 1px borders around 6–8% white opacity */
-  --border:         rgba(255, 255, 255, 0.07);
-  --border-subtle:  rgba(255, 255, 255, 0.04);
-  --border-accent:  rgba(20, 184, 166, 0.28);
-  --border-accent-strong: rgba(20, 184, 166, 0.45);
+  /* Card border */
+  --border:               #E2E8F0;
+  --border-subtle:        #F1F5F9;
+  --border-hover:         #CBD5E1;
+  --border-focus:         #2563EB;
+  --border-accent:        rgba(37, 99, 235, 0.25);
+  --border-accent-strong: #2563EB;
 
-  /* Brand gradient: dark slate-teal → muted cyan */
-  --accent-1:       #0d9488;
-  --accent-2:       #14b8a6;
-  --accent-cyan:    #06b6d4;
-  --accent-grad:    linear-gradient(135deg, #0d9488 0%, #14b8a6 50%, #06b6d4 100%);
+  /* Shadows: very soft, e.g. 0 1px 2px rgba(15,23,42,0.05), 0 4px 12px rgba(15,23,42,0.04) */
+  --shadow-xs:            0 1px 2px rgba(15, 23, 42, 0.05);
+  --shadow-sm:            0 1px 2px rgba(15, 23, 42, 0.05), 0 4px 12px rgba(15, 23, 42, 0.04);
+  --shadow-md:            0 1px 2px rgba(15, 23, 42, 0.05), 0 4px 12px rgba(15, 23, 42, 0.04);
+  --shadow-card:          0 1px 2px rgba(15, 23, 42, 0.05), 0 4px 12px rgba(15, 23, 42, 0.04);
+  --shadow-lg:            0 4px 6px -1px rgba(15, 23, 42, 0.06), 0 10px 15px -3px rgba(15, 23, 42, 0.08);
+  --shadow-glow:          none;
+  --shadow-aerial:        0 1px 2px rgba(15, 23, 42, 0.05), 0 4px 12px rgba(15, 23, 42, 0.04);
 
-  /* Semantic colours: refined, balanced, non-neon */
-  --success:        #10b981;
-  --success-bg:     rgba(16, 185, 129, 0.1);
-  --success-border: rgba(16, 185, 129, 0.22);
-  --warning:        #f59e0b;
-  --warning-bg:     rgba(245, 158, 11, 0.1);
-  --warning-border: rgba(245, 158, 11, 0.22);
-  --danger:         #f43f5e;
-  --danger-bg:      rgba(244, 63, 94, 0.1);
-  --danger-border:  rgba(244, 63, 94, 0.22);
-  --info:           #38bdf8;
-  --info-bg:        rgba(56, 189, 248, 0.1);
-  --info-border:    rgba(56, 189, 248, 0.22);
+  /* Sidebar: Deep Navy #0F2747 */
+  --navy:                 #0F2747;
+  --navy-dark:            #0A1C33;
+  --navy-light:           #1E3A60;
+  --sidebar-w:            240px;
+  --sidebar-w-col:        72px;
+  --sidebar-bg:           #0F2747;
+  --sidebar-border:       rgba(255, 255, 255, 0.08);
+  --sidebar-text:         #CBD5E1;
+  --sidebar-text-muted:   #94A3B8;
+  --sidebar-hover:        rgba(255, 255, 255, 0.08);
 
-  /* Text: clear slate hierarchy */
-  --text-primary:   #f8fafc;
-  --text-secondary: #94a3b8;
-  --text-muted:     #64748b;
+  /* Primary Blue: #2563EB (buttons, links, active nav, chart demand line) */
+  --primary-blue:         #2563EB;
+  --primary-blue-hover:   #1D4ED8;
+  --primary-blue-subtle:  rgba(37, 99, 235, 0.10);
+  --primary-blue-border:  rgba(37, 99, 235, 0.25);
 
-  /* Sidebar */
-  --sidebar-w:      240px;
-  --sidebar-w-col:  72px;
+  /* Secondary Neutral / Slate */
+  --secondary-teal:       #475569;
+  --secondary-teal-hover: #334155;
+  --secondary-teal-subtle:rgba(71, 85, 105, 0.08);
+  --secondary-teal-border:rgba(71, 85, 105, 0.25);
 
-  /* Header */
-  --header-h:       64px;
+  /* Typography: Dark Navy/Slate text, Primary Navy headings */
+  --text-primary:         #0F172A;
+  --text-heading:         #0F172A;
+  --text-secondary:       #475569;
+  --text-muted:           #64748B;
 
-  /* Shadows: restrained and smooth */
-  --shadow-sm:      0 2px 8px rgba(0, 0, 0, 0.35);
-  --shadow-md:      0 8px 24px rgba(0, 0, 0, 0.45);
-  --shadow-glow:    0 0 20px rgba(20, 184, 166, 0.12);
-  --shadow-aerial:  0 12px 36px rgba(0, 0, 0, 0.55);
+  /* Semantic Status: Success #16A34A, Warning #D97706, Danger #DC2626 */
+  /* Status chips use a tinted background (about 10% opacity) with the same-colour text */
+  --status-success:       #16A34A;
+  --status-success-bg:    rgba(22, 163, 74, 0.10);
+  --status-success-subtle:rgba(22, 163, 74, 0.10);
+  --status-success-border:rgba(22, 163, 74, 0.25);
 
-  /* Radii */
-  --radius-sm:      8px;
-  --radius-md:      12px;
-  --radius-lg:      16px;
-  --radius-xl:      24px;
+  --status-warning:       #D97706;
+  --status-warning-bg:    rgba(217, 119, 6, 0.10);
+  --status-warning-subtle:rgba(217, 119, 6, 0.10);
+  --status-warning-border:rgba(217, 119, 6, 0.25);
+
+  --status-danger:        #DC2626;
+  --status-critical:      #DC2626;
+  --status-danger-bg:     rgba(220, 38, 38, 0.10);
+  --status-critical-bg:   rgba(220, 38, 38, 0.10);
+  --status-danger-subtle: rgba(220, 38, 38, 0.10);
+  --status-critical-subtle:rgba(220, 38, 38, 0.10);
+  --status-danger-border: rgba(220, 38, 38, 0.25);
+  --status-critical-border:rgba(220, 38, 38, 0.25);
+
+  --status-info:          #2563EB;
+  --status-info-bg:       rgba(37, 99, 235, 0.10);
+  --status-info-subtle:   rgba(37, 99, 235, 0.10);
+  --status-info-border:   rgba(37, 99, 235, 0.25);
+
+  /* Aliases for component compatibility */
+  --accent-1:             var(--primary-blue);
+  --accent-2:             var(--text-secondary);
+  --accent-cyan:          var(--primary-blue);
+  --accent-primary:       var(--primary-blue);
+  --accent-secondary:     var(--text-secondary);
+  --accent-grad:          linear-gradient(135deg, #0F2747 0%, #2563EB 100%);
+
+  --success:              var(--status-success);
+  --success-bg:           var(--status-success-bg);
+  --success-border:       var(--status-success-border);
+  --warning:              var(--status-warning);
+  --warning-bg:           var(--status-warning-bg);
+  --warning-border:       var(--status-warning-border);
+  --danger:               var(--status-danger);
+  --danger-bg:            var(--status-danger-bg);
+  --danger-border:        var(--status-danger-border);
+  --info:                 var(--status-info);
+  --info-bg:              var(--status-info-bg);
+  --info-border:          var(--status-info-border);
+
+  /* Top Header: Page background with 1px bottom border in card border color */
+  --header-h:             64px;
+  --header-bg:            var(--bg-base);
+  --header-border:        var(--border);
+
+  /* Radii: Uniform 10px on cards for consistency */
+  --radius-xs:            4px;
+  --radius-sm:            6px;
+  --radius-md:            10px;
+  --radius-lg:            10px;
+  --radius-card:          10px;
+  --radius-xl:            12px;
 
   /* Transitions */
-  --transition:      0.2s cubic-bezier(0.16, 1, 0.3, 1);
-  --transition-slow: 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+  --transition:           0.15s ease-in-out;
+  --transition-slow:      0.25s ease-in-out;
 
   /* Typography */
-  --font-sans:      'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  --font-display:   'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  --font-mono:      ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  --font-sans:            'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-display:         'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-mono:            ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 }
 
 /* ---- Reset ---- */
@@ -80,7 +141,7 @@
 
 html {
   scroll-behavior: smooth;
-  color-scheme: dark;
+  color-scheme: light;
 }
 
 body {
@@ -106,22 +167,22 @@ body {
   height: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: var(--bg-surface);
+  background: var(--bg-base);
 }
 ::-webkit-scrollbar-thumb {
-  background: var(--bg-elevated);
+  background: #CBD5E1;
   border-radius: 99px;
-  border: 1px solid rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border);
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--accent-1);
+  background: var(--text-secondary);
 }
 
 /* ---- Typography ---- */
 h1, h2, h3, h4, h5 {
   font-family: var(--font-display);
   font-weight: 600;
-  color: var(--text-primary);
+  color: var(--text-heading);
   line-height: 1.25;
   letter-spacing: -0.015em;
 }
@@ -155,24 +216,20 @@ input {
 
 /* ---- Utility Classes ---- */
 .gradient-text {
-  background: var(--accent-grad);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  color: var(--text-heading);
 }
 
 .glass {
-  background: var(--bg-card-glass);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
+  background: var(--bg-card);
   border: 1px solid var(--border);
+  box-shadow: var(--shadow-sm);
 }
 
 /* ---- Animations ---- */
 @keyframes fadeInUp {
   from {
     opacity: 0;
-    transform: translateY(12px);
+    transform: translateY(8px);
   }
   to {
     opacity: 1;
@@ -182,10 +239,10 @@ input {
 
 @keyframes pulseGlow {
   0%, 100% {
-    box-shadow: 0 0 0 0 rgba(20, 184, 166, 0.4);
+    box-shadow: 0 0 0 0 rgba(52, 120, 200, 0.25);
   }
   50% {
-    box-shadow: 0 0 0 6px rgba(20, 184, 166, 0);
+    box-shadow: 0 0 0 4px rgba(52, 120, 200, 0);
   }
 }
 

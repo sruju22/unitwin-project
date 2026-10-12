@@ -22,12 +22,12 @@ export default function Dashboard({ onNavigate }) {
 
     async function loadDashboardData() {
       try {
-        setLoading(true);
+        const asOfDate = new Date().toISOString();
         const [bldRes, occRes, nrgRes, alrRes, insRes] = await Promise.allSettled([
           getBuildings(),
-          getOccupancy(),
-          getEnergyUsage(),
-          getAlerts(),
+          getOccupancy({ asOfDate }),
+          getEnergyUsage({ asOfDate }),
+          getAlerts({ asOfDate }),
           getInsights(),
         ]);
 

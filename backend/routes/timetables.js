@@ -13,25 +13,34 @@ const DAY_ORDER = {
   Sunday: 7,
 };
 
-// GET /api/timetables - List timetables with optional room, sectionId, and day filters
+// Safe regex escape helper
+function escapeRegex(str) {
+  return String(str).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+// GET /api/timetables - List timetables with optional room, sectionId, day, type, and branch filters
 router.get('/', async (req, res, next) => {
   try {
     const filter = {};
 
+    if (req.query.branch) {
+      filter.sectionId = new RegExp(`^${escapeRegex(req.query.branch)}_`, 'i');
+    }
+
     if (req.query.room) {
-      filter.room = new RegExp(`^${req.query.room}$`, 'i');
+      filter.room = new RegExp(`^${escapeRegex(req.query.room)}$`, 'i');
     }
 
     if (req.query.sectionId) {
-      filter.sectionId = new RegExp(`^${req.query.sectionId}$`, 'i');
+      filter.sectionId = new RegExp(`^${escapeRegex(req.query.sectionId)}$`, 'i');
     }
 
     if (req.query.day) {
-      filter.day = new RegExp(`^${req.query.day}$`, 'i');
+      filter.day = new RegExp(`^${escapeRegex(req.query.day)}$`, 'i');
     }
 
     if (req.query.type) {
-      filter.type = new RegExp(`^${req.query.type}$`, 'i');
+      filter.type = new RegExp(`^${escapeRegex(req.query.type)}$`, 'i');
     }
 
     const items = await Timetable.find(filter)
