@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { getEnergyUsage, getSolarGeneration, getAlerts } from '../api/client';
+import { formatCampusDate, formatCampusDateTime } from '../utils/dateUtils';
 import Skeleton from '../components/Skeleton';
 import styles from './Energy.module.css';
 
@@ -59,14 +60,7 @@ export default function Energy({ onNavigate }) {
   const formatTime = (ts) => {
     if (!ts) return 'Recent';
     try {
-      const d = new Date(ts);
-      if (isNaN(d.getTime())) return ts;
-      return d.toLocaleDateString('en-US', {
-        month: 'short',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-      });
+      return formatCampusDateTime(ts) || ts;
     } catch {
       return ts;
     }
@@ -214,7 +208,7 @@ export default function Energy({ onNavigate }) {
                 <tbody>
                   {dailyComparison.map((row) => (
                     <tr key={row.date}>
-                      <td className={styles.dateCell}>{row.date}</td>
+                      <td className={styles.dateCell}>{formatCampusDate(row.date, { includeYear: true }) || row.date}</td>
                       <td>{row.consumptionKWh}</td>
                       <td>{row.solarGeneratedKWh}</td>
                       <td>{row.netGridImportKWh}</td>

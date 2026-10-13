@@ -15,6 +15,7 @@ export default function Header({ activePage, onOpenCommandPalette, alertCount = 
   const { title, subtitle } = PAGE_TITLES[activePage] || PAGE_TITLES.dashboard;
   const now = new Date();
   const dateStr = now.toLocaleDateString('en-US', {
+    timeZone: 'Asia/Kolkata',
     weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
   });
 

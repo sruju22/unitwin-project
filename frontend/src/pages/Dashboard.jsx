@@ -252,7 +252,7 @@ export default function Dashboard({ onNavigate }) {
               </span>
             </div>
             <p className={styles.bannerSubtitle}>
-              Executive overview · {totalBuildings || 10} Buildings Monitored · Oct 12–16 Telemetry Baseline
+              Executive overview · {totalBuildings || 10} Buildings Monitored · Oct 12–17 Telemetry Baseline
             </p>
           </div>
         </div>

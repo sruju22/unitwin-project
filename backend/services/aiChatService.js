@@ -419,6 +419,14 @@ function formatDeterministicResponse(intent, groundedData, dateContext) {
                   `- **[${a.severity}] ${a.type}** (Room ${a.room || 'General'}, ${a.building}): ${a.message}. *Recommended: ${a.action}*`
               )
               .join('\n')
+          : data.recentAlerts && data.recentAlerts.length > 0
+          ? `**Recent Incident Reports:**\n` +
+            data.recentAlerts
+              .map(
+                (a) =>
+                  `- **[${a.severity}] ${a.type}** (Room ${a.room || 'General'}, ${a.building}): ${a.message}. *Recommended: ${a.action}*`
+              )
+              .join('\n')
           : '',
         `*Reporting Cutoff Applied:* \`${data.actualCutoffApplied}\``,
       ]

@@ -20,7 +20,17 @@ router.get('/', async (req, res, next) => {
         filter.prototype = true;
       }
     }
-    if (req.query.asOfDate) {
+    if (req.query.snapshotTimestamp) {
+      const snapDate = new Date(req.query.snapshotTimestamp);
+      if (!isNaN(snapDate.getTime())) {
+        filter.timestamp = snapDate;
+      }
+    } else if (req.query.date) {
+      // Date in Asia/Kolkata (YYYY-MM-DD)
+      const start = new Date(`${req.query.date}T00:00:00+05:30`);
+      const end = new Date(`${req.query.date}T23:59:59.999+05:30`);
+      filter.timestamp = { ...(filter.timestamp || {}), $gte: start, $lte: end };
+    } else if (req.query.asOfDate) {
       const parsedDate = new Date(req.query.asOfDate);
       if (!isNaN(parsedDate.getTime())) {
         filter.timestamp = { ...(filter.timestamp || {}), $lte: parsedDate };
@@ -48,9 +58,8 @@ router.get('/', async (req, res, next) => {
     let summary = null;
     let latestSlice = null;
     if (timelineAgg.length > 0) {
-      // Prefer latest comprehensive snapshot (roomCount >= 50) on or before cutoff
-      const fullSnapshots = timelineAgg.filter((t) => t.roomCount >= 50);
-      const targetSnapshot = fullSnapshots.length > 0 ? fullSnapshots[fullSnapshots.length - 1] : timelineAgg[timelineAgg.length - 1];
+      // Select the latest snapshot matching the filter boundaries (including Saturday Oct 17)
+      const targetSnapshot = timelineAgg[timelineAgg.length - 1];
       const latestTime = targetSnapshot._id.timestamp;
       latestSlice = await db
         .collection('occupancy')
@@ -68,6 +77,7 @@ router.get('/', async (req, res, next) => {
         snapshotLabel: item._id.snapshotLabel || 'Snapshot',
         totalOccupancy: item.totalOccupancy,
         totalCapacity: item.totalCapacity,
+        roomCount: item.roomCount,
         utilization: item.totalCapacity > 0
           ? Number(((item.totalOccupancy / item.totalCapacity) * 100).toFixed(1))
           : 0,
@@ -78,9 +88,9 @@ router.get('/', async (req, res, next) => {
         totalCapacity,
         averageUtilization,
         roomCount: latestSlice.length,
-        snapshotLabel: latestDoc[0].snapshotLabel || 'Live Snapshot',
-        timestamp: latestDoc[0].timestamp,
-        isPrototype: latestDoc[0].prototype === true,
+        snapshotLabel: targetSnapshot._id.snapshotLabel || latestDoc[0]?.snapshotLabel || 'Live Snapshot',
+        timestamp: latestTime,
+        isPrototype: latestSlice.some((r) => r.prototype === true) || latestDoc[0]?.prototype === true,
         timeline,
       };
     }

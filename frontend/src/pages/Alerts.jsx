@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { getAlerts, getBuildings } from '../api/client';
+import { formatCampusDateTime } from '../utils/dateUtils';
 import Skeleton from '../components/Skeleton';
 import styles from './Alerts.module.css';
 
@@ -163,14 +164,7 @@ export default function Alerts() {
   const formatTimestamp = (ts) => {
     if (!ts) return 'Recent';
     try {
-      const d = new Date(ts);
-      if (isNaN(d.getTime())) return ts;
-      return d.toLocaleDateString('en-US', {
-        month: 'short',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-      });
+      return formatCampusDateTime(ts) || ts;
     } catch {
       return ts;
     }

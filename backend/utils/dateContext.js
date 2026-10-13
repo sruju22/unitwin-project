@@ -35,12 +35,15 @@ const WEEKDAYS = {
   saturday: 6,
 };
 
+const CAMPUS_TIMEZONE = 'Asia/Kolkata';
+
 /**
  * Format a Date object into a readable institutional string: e.g. "Monday, October 12, 2026"
  */
 function formatDisplayDate(date) {
   if (!date || isNaN(date.getTime())) return 'Unknown Date';
   return date.toLocaleDateString('en-US', {
+    timeZone: CAMPUS_TIMEZONE,
     weekday: 'long',
     year: 'numeric',
     month: 'long',
@@ -53,11 +56,13 @@ function formatDisplayDate(date) {
  */
 function formatDisplayTime(date) {
   if (!date || isNaN(date.getTime())) return '';
-  return date.toLocaleTimeString('en-US', {
+  const timeStr = date.toLocaleTimeString('en-US', {
+    timeZone: CAMPUS_TIMEZONE,
     hour: '2-digit',
     minute: '2-digit',
     hour12: true,
   });
+  return `${timeStr} IST`;
 }
 
 /**
@@ -79,13 +84,18 @@ function resolveDateContext({ asOfDate, message = '' }) {
   }
 
   const reportingCutoff = new Date(reportingDate.getTime());
-  const reportingDateStr = reportingDate.toISOString().split('T')[0];
+  const reportingDateStr = new Intl.DateTimeFormat('en-CA', {
+    timeZone: CAMPUS_TIMEZONE,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(reportingDate);
   const reportingDisplayLabel = formatDisplayDate(reportingDate);
 
   const text = (message || '').toLowerCase().trim();
 
-  // 2. Detect multi-day baseline requests (e.g. "5-day baseline", "entire week", "weekly total")
-  const isMultiDayQuery = /\b(?:5-day|five-day|weekly|across the week|whole week|multi-day|entire dataset|entire week|all days)\b/i.test(text);
+  // 2. Detect multi-day baseline requests (e.g. "5-day baseline", "6-day baseline", "entire week", "weekly total")
+  const isMultiDayQuery = /\b(?:5-day|five-day|6-day|six-day|weekly|across the week|whole week|multi-day|entire dataset|entire week|all days)\b/i.test(text);
 
   if (isMultiDayQuery) {
     return {
@@ -97,18 +107,18 @@ function resolveDateContext({ asOfDate, message = '' }) {
       targetCutoff: reportingCutoff,
       targetDate: null,
       targetDateStr: null,
-      targetDisplayLabel: 'Multi-Day Pilot Baseline (Oct 12–16, 2026)',
+      targetDisplayLabel: 'Multi-Day Pilot Baseline (Oct 12–17, 2026)',
       isFuture: false,
       isHistorical: false,
       isMultiDay: true,
-      notice: 'Aggregated across the multi-day pilot monitoring baseline (Oct 12–16, 2026).',
+      notice: 'Aggregated across the multi-day pilot monitoring baseline (Oct 12–17, 2026).',
     };
   }
 
   // 3. Detect explicit date mentions in the message
   let explicitTargetDate = null;
 
-  // Match month + day: e.g. "Oct 16", "October 16th", "16 Oct", "16th of October"
+  // Match month + day: e.g. "Oct 16", "October 16th", "Oct 17", "17 Oct", "17th of October"
   const monthDayMatch = text.match(/\b(?:on\s+)?(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\s+(\d{1,2})(?:st|nd|rd|th)?\b/i) ||
                         text.match(/\b(\d{1,2})(?:st|nd|rd|th)?\s+(?:of\s+)?(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\b/i);
 
@@ -126,8 +136,9 @@ function resolveDateContext({ asOfDate, message = '' }) {
     const monthIndex = MONTH_NAMES[monthStr];
     if (monthIndex !== undefined && dayNum >= 1 && dayNum <= 31) {
       const year = reportingDate.getFullYear();
-      // Construct date at end of that requested day in local time
-      explicitTargetDate = new Date(year, monthIndex, dayNum, 23, 59, 59, 999);
+      const mm = String(monthIndex + 1).padStart(2, '0');
+      const dd = String(dayNum).padStart(2, '0');
+      explicitTargetDate = new Date(`${year}-${mm}-${dd}T23:59:59.999+05:30`);
     }
   }
 
@@ -140,8 +151,13 @@ function resolveDateContext({ asOfDate, message = '' }) {
       const dayDiff = targetDayOfWeek - currentDayOfWeek;
       const target = new Date(reportingDate.getTime());
       target.setDate(reportingDate.getDate() + dayDiff);
-      target.setHours(23, 59, 59, 999);
-      explicitTargetDate = target;
+      const campusDayStr = new Intl.DateTimeFormat('en-CA', {
+        timeZone: CAMPUS_TIMEZONE,
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+      }).format(target);
+      explicitTargetDate = new Date(`${campusDayStr}T23:59:59.999+05:30`);
     }
   }
 
@@ -150,19 +166,34 @@ function resolveDateContext({ asOfDate, message = '' }) {
     if (/\btomorrow\b/i.test(text)) {
       const target = new Date(reportingDate.getTime());
       target.setDate(reportingDate.getDate() + 1);
-      target.setHours(23, 59, 59, 999);
-      explicitTargetDate = target;
+      const campusDayStr = new Intl.DateTimeFormat('en-CA', {
+        timeZone: CAMPUS_TIMEZONE,
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+      }).format(target);
+      explicitTargetDate = new Date(`${campusDayStr}T23:59:59.999+05:30`);
     } else if (/\byesterday\b/i.test(text)) {
       const target = new Date(reportingDate.getTime());
       target.setDate(reportingDate.getDate() - 1);
-      target.setHours(23, 59, 59, 999);
-      explicitTargetDate = target;
+      const campusDayStr = new Intl.DateTimeFormat('en-CA', {
+        timeZone: CAMPUS_TIMEZONE,
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+      }).format(target);
+      explicitTargetDate = new Date(`${campusDayStr}T23:59:59.999+05:30`);
     }
   }
 
   // 4. Resolve temporal relationship if an explicit date was requested
   if (explicitTargetDate) {
-    const targetDateStr = explicitTargetDate.toISOString().split('T')[0];
+    const targetDateStr = new Intl.DateTimeFormat('en-CA', {
+      timeZone: CAMPUS_TIMEZONE,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    }).format(explicitTargetDate);
     const targetDisplayLabel = formatDisplayDate(explicitTargetDate);
 
     // If target date is strictly after reporting cutoff
@@ -180,7 +211,7 @@ function resolveDateContext({ asOfDate, message = '' }) {
         isFuture: true,
         isHistorical: false,
         isMultiDay: false,
-        notice: `Note: ${targetDisplayLabel} is ahead of the active campus reporting date (${reportingDisplayLabel}). Displaying future pilot simulation records from the dataset.`,
+        notice: `Note: ${targetDisplayLabel} is ahead of the active campus reporting date (${reportingDisplayLabel}). Displaying pilot telemetry records from the dataset.`,
       };
     }
 

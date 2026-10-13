@@ -149,16 +149,15 @@ async function getOccupancy(query = {}, dateContext = null) {
   const db = getDb();
   const cutoff = getEffectiveCutoff(query, dateContext);
 
-  // Find latest full campus snapshot (monitored rooms >= 50) on or before cutoff
-  const fullSnapAgg = await db.collection('occupancy').aggregate([
+  // Find latest snapshot on or before cutoff (including Saturday Oct 17 scheduled sessions)
+  const latestSnapAgg = await db.collection('occupancy').aggregate([
     { $match: { timestamp: { $lte: cutoff } } },
     { $group: { _id: { timestamp: '$timestamp', label: '$snapshotLabel' }, count: { $sum: 1 } } },
-    { $match: { count: { $gte: 50 } } },
     { $sort: { '_id.timestamp': -1 } },
     { $limit: 1 },
   ]).toArray();
 
-  if (fullSnapAgg.length === 0) {
+  if (latestSnapAgg.length === 0) {
     return {
       domain: 'Campus Occupancy & Utilization',
       sourceCollection: 'occupancy',
@@ -170,8 +169,8 @@ async function getOccupancy(query = {}, dateContext = null) {
     };
   }
 
-  const latestTime = fullSnapAgg[0]._id.timestamp;
-  const latestLabel = fullSnapAgg[0]._id.label;
+  const latestTime = latestSnapAgg[0]._id.timestamp;
+  const latestLabel = latestSnapAgg[0]._id.label;
   const snapshotDate = new Date(latestTime);
   const snapshotDisplay = `${formatDisplayDate(snapshotDate)} (${latestLabel})`;
 
@@ -262,9 +261,14 @@ async function getEnergyAndSolar(query = {}, dateContext = null) {
   const latestLabel = latestEnergy[0].snapshotLabel || 'Snapshot';
   const snapshotDate = new Date(latestTime);
 
-  // Day window for the latest snapshot (e.g. 2026-10-12 00:00 to cutoff)
-  const targetDayStart = new Date(snapshotDate);
-  targetDayStart.setHours(0, 0, 0, 0);
+  // Day window for the latest snapshot in Asia/Kolkata (00:00:00 IST to cutoff)
+  const campusDayKey = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Kolkata',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(snapshotDate);
+  const targetDayStart = new Date(`${campusDayKey}T00:00:00+05:30`);
 
   // 2. Compute Active Power Demand (kW) dynamically for the latest snapshot
   const activeDemandAgg = await db.collection('energyUsage').aggregate([
@@ -548,7 +552,7 @@ async function getAlerts(query = {}, dateContext = null) {
   const db = getDb();
   const cutoff = getEffectiveCutoff(query, dateContext);
 
-  const [totalAlerts, severityAgg, typeAgg, highPriorityAlerts] = await Promise.all([
+  const [totalAlerts, severityAgg, typeAgg, highPriorityAlerts, recentAlerts] = await Promise.all([
     db.collection('alerts').countDocuments({ timestamp: { $lte: cutoff } }),
     db.collection('alerts').aggregate([
       { $match: { timestamp: { $lte: cutoff } } },
@@ -563,6 +567,12 @@ async function getAlerts(query = {}, dateContext = null) {
     db
       .collection('alerts')
       .find({ timestamp: { $lte: cutoff }, severity: { $in: ['High', 'Critical'] } })
+      .sort({ timestamp: -1 })
+      .limit(6)
+      .toArray(),
+    db
+      .collection('alerts')
+      .find({ timestamp: { $lte: cutoff } })
       .sort({ timestamp: -1 })
       .limit(6)
       .toArray(),
@@ -586,6 +596,17 @@ async function getAlerts(query = {}, dateContext = null) {
       room: a.roomNumber,
       message: a.message,
       action: a.actionRecommended,
+      timestamp: a.timestamp,
+    })),
+    recentAlerts: recentAlerts.map((a) => ({
+      alertId: a.alertId,
+      type: a.alertType,
+      severity: a.severity,
+      building: a.buildingId,
+      room: a.roomNumber,
+      message: a.message,
+      action: a.actionRecommended,
+      timestamp: a.timestamp,
     })),
     notice: dateContext?.notice || null,
   };

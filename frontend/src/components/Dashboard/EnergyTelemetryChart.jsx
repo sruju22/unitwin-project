@@ -1,5 +1,13 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { getEnergyUsage } from '../../api/client';
+import {
+  CAMPUS_TIMEZONE,
+  parseCampusDate,
+  getCampusDayKey,
+  formatCampusDate,
+  formatCampusTime,
+  getDayOrdinal,
+} from '../../utils/dateUtils';
 import styles from './EnergyTelemetryChart.module.css';
 
 /**
@@ -78,42 +86,52 @@ export default function EnergyTelemetryChart() {
 
     const latestPoint = sorted[sorted.length - 1];
     const latestTimestamp = new Date(latestPoint.timestamp).getTime();
-    const latestDateStr = new Date(latestTimestamp).toISOString().split('T')[0];
+    const targetCampusDay = getCampusDayKey(latestPoint.timestamp);
 
     let points = sorted;
     if (activeRange === 'today') {
-      // Readings for the reporting day (Oct 12, 2026: 3 snapshots)
+      // Readings strictly for the campus-local reporting day (Asia/Kolkata)
       points = sorted.filter(
-        (p) => new Date(p.timestamp).toISOString().split('T')[0] === latestDateStr
+        (p) => getCampusDayKey(p.timestamp) === targetCampusDay
       );
     } else if (activeRange === '24h') {
       // Readings within 24-hour window relative to the latest point
       const window24h = 24 * 60 * 60 * 1000;
       points = sorted.filter((p) => {
         const t = new Date(p.timestamp).getTime();
-        return latestTimestamp - t <= window24h;
+        return latestTimestamp - t <= window24h && t <= latestTimestamp;
       });
     } else if (activeRange === '7d') {
-      // Full multi-day monitoring baseline (all 15 historical snapshots across Oct 12–16)
+      // Full multi-day monitoring baseline
       points = sorted;
     }
 
     return points.map((pt, idx) => {
-      const d = new Date(pt.timestamp);
+      const d = parseCampusDate(pt.timestamp);
       const demandVal = Number(pt.demandKw) || 0;
       const solarVal = typeof pt.solarKw === 'number' ? Number(pt.solarKw) : 0;
       const netVal = Number(Math.max(0, demandVal - solarVal).toFixed(1));
       const offsetVal = demandVal > 0 ? Number(((solarVal / demandVal) * 100).toFixed(1)) : 0;
 
-      const dateLabel = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-      const timeLabel = pt.snapshotLabel || d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+      const dateLabel = formatCampusDate(d);
+      const fullDateLabel = formatCampusDate(d, { includeYear: true });
+      const dayKey = getCampusDayKey(d);
+      const dayNumber = new Intl.DateTimeFormat('en-US', { timeZone: CAMPUS_TIMEZONE, day: 'numeric' }).format(d);
+      const monthShort = new Intl.DateTimeFormat('en-US', { timeZone: CAMPUS_TIMEZONE, month: 'short' }).format(d);
+      const year = new Intl.DateTimeFormat('en-US', { timeZone: CAMPUS_TIMEZONE, year: 'numeric' }).format(d);
+      const timeLabel = pt.snapshotLabel || formatCampusTime(d);
 
       return {
         id: idx,
         timestamp: pt.timestamp,
         dateLabel,
+        fullDateLabel,
+        dayKey,
+        dayNumber,
+        monthShort,
+        year,
         timeLabel,
-        fullLabel: `${dateLabel}, ${d.getFullYear()} · ${timeLabel}`,
+        fullLabel: `${fullDateLabel} · ${timeLabel}`,
         demand: demandVal,
         solar: solarVal,
         energyKWh: Number(pt.energyKWh) || 0,
@@ -130,16 +148,44 @@ export default function EnergyTelemetryChart() {
     ? energyData[hoverIndex !== null && hoverIndex < energyData.length ? hoverIndex : energyData.length - 1]
     : null;
 
-  // Dynamic concise subtitle based on active range
+  // Dynamic concise subtitle based on active range and campus-local dates
   const chartSubtitle = useMemo(() => {
+    if (!energyData.length) {
+      if (activeRange === 'today') return 'Campus reporting date · No snapshots';
+      if (activeRange === '24h') return '24h window · No snapshots';
+      return 'Multi-day baseline · No snapshots';
+    }
+
+    const firstPt = energyData[0];
+    const lastPt = energyData[energyData.length - 1];
+    const snapshotCount = `${energyData.length} snapshot${energyData.length === 1 ? '' : 's'}`;
+
     if (activeRange === 'today') {
-      return `Oct 12, 2026 · ${energyData.length} snapshots`;
+      // In Today mode, display the campus-local reporting date derived from the active snapshot
+      return `${lastPt.fullDateLabel} · ${snapshotCount}`;
     }
+
     if (activeRange === '24h') {
-      return `24h window · ${energyData.length} snapshots`;
+      // 24h window: display the dates spanned by the window
+      if (firstPt.dayKey !== lastPt.dayKey) {
+        if (firstPt.year === lastPt.year) {
+          return `24h window (${firstPt.dateLabel} – ${lastPt.dateLabel}, ${lastPt.year}) · ${snapshotCount}`;
+        }
+        return `24h window (${firstPt.fullDateLabel} – ${lastPt.fullDateLabel}) · ${snapshotCount}`;
+      }
+      return `24h window (${lastPt.fullDateLabel}) · ${snapshotCount}`;
     }
-    return `Oct 12–16 baseline · ${energyData.length} snapshots`;
-  }, [activeRange, energyData.length]);
+
+    // 7d: Full multi-day monitoring baseline
+    if (firstPt.dayKey !== lastPt.dayKey) {
+      if (firstPt.monthShort === lastPt.monthShort && firstPt.year === lastPt.year) {
+        return `${firstPt.monthShort} ${firstPt.dayNumber}–${lastPt.dayNumber}, ${lastPt.year} baseline · ${snapshotCount}`;
+      }
+      return `${firstPt.dateLabel} – ${lastPt.dateLabel}, ${lastPt.year} baseline · ${snapshotCount}`;
+    }
+
+    return `${lastPt.fullDateLabel} baseline · ${snapshotCount}`;
+  }, [activeRange, energyData]);
 
   // Chart coordinate parameters
   const w = 640;
@@ -160,7 +206,12 @@ export default function EnergyTelemetryChart() {
   const maxSolarVal = 5.0;
   const solarTicks = [0, 2.5, 5.0];
 
-  const getX = (idx) => padL + (idx / Math.max(energyData.length - 1, 1)) * chartW;
+  const getX = (idx) => {
+    if (energyData.length <= 1) {
+      return padL + chartW / 2;
+    }
+    return padL + (idx / (energyData.length - 1)) * chartW;
+  };
 
   const getYDemand = (val) => {
     const clamped = Math.max(0, Math.min(val, maxDemandVal));
@@ -281,7 +332,7 @@ export default function EnergyTelemetryChart() {
                 setHoverIndex(null);
               }}
               className={`${styles.rangeBtn} ${activeRange === 'today' ? styles.rangeActive : ''}`}
-              title="Reporting day readings (Oct 12, 2026: 3 snapshots)"
+              title="Reporting day readings for campus-local date"
             >
               Today
             </button>
@@ -303,7 +354,7 @@ export default function EnergyTelemetryChart() {
                 setHoverIndex(null);
               }}
               className={`${styles.rangeBtn} ${activeRange === '7d' ? styles.rangeActive : ''}`}
-              title="Full multi-day monitoring baseline (Oct 12–16: 15 snapshots)"
+              title="Full multi-day monitoring baseline"
             >
               7d
             </button>
@@ -611,10 +662,12 @@ export default function EnergyTelemetryChart() {
                     labelText = d.timeLabel.replace(' IST', '');
                   } else if (activeRange === '24h') {
                     showLabel = true;
-                    labelText = `${d.dateLabel.split(' ')[1]}th ${d.timeLabel.replace(' IST', '')}`;
+                    labelText = `${getDayOrdinal(d.dayNumber)} ${d.timeLabel.replace(' IST', '')}`;
                   } else if (activeRange === '7d') {
-                    // Show date label on midday snapshot of each day (indices 1, 4, 7, 10, 13)
-                    if (i % 3 === 1) {
+                    // Show date label on midday snapshot of each day (or first/last when few points)
+                    const isMidDay = i % 3 === 1;
+                    const isFirstOrLast = i === 0 || i === energyData.length - 1;
+                    if (isMidDay || (energyData.length <= 5 && isFirstOrLast)) {
                       showLabel = true;
                       labelText = d.dateLabel;
                     }
@@ -681,7 +734,7 @@ export default function EnergyTelemetryChart() {
                   {/* Timestamp Header */}
                   <div className={styles.tipHeader}>
                     <span className={styles.tipTime}>{activePoint.timeLabel}</span>
-                    <span className={styles.tipDate}>{activePoint.dateLabel}, 2026</span>
+                    <span className={styles.tipDate}>{activePoint.fullDateLabel}</span>
                   </div>
 
                   <div className={styles.tipDivider} />

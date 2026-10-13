@@ -160,14 +160,14 @@ export default function Analytics({ onNavigate }) {
     const epochCount = Math.max(sortedOccupancyTimeline.length, sortedEnergyTimeline.length, 15);
     if (!timestamps.length) {
       return {
-        formattedRange: 'Oct 12 – Oct 16, 2026',
+        formattedRange: 'Oct 12 – Oct 17, 2026',
         epochCount,
       };
     }
     const minD = new Date(Math.min(...timestamps));
     const maxD = new Date(Math.max(...timestamps));
-    const startStr = minD.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-    const endStr = maxD.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    const startStr = minD.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'Asia/Kolkata' });
+    const endStr = maxD.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'Asia/Kolkata' });
     return {
       formattedRange: startStr === endStr ? startStr : `${startStr} – ${endStr}`,
       epochCount,

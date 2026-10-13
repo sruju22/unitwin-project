@@ -108,7 +108,7 @@ router.get('/', async (req, res, next) => {
         { $match: filter.timestamp ? { timestamp: filter.timestamp } : {} },
         {
           $group: {
-            _id: { $dateToString: { format: '%Y-%m-%d', date: '$timestamp' } },
+            _id: { $dateToString: { format: '%Y-%m-%d', date: '$timestamp', timezone: 'Asia/Kolkata' } },
             totalKWh: { $sum: '$energyGeneratedKWh' },
           },
         },
@@ -157,9 +157,17 @@ router.get('/', async (req, res, next) => {
 
     // Daily comparison table between energy consumption and solar generation
     const dailyComparison = [];
+    const getCampusDayStr = (dateVal) =>
+      new Intl.DateTimeFormat('en-CA', {
+        timeZone: 'Asia/Kolkata',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+      }).format(new Date(dateVal));
+
     const energyDailyMap = {};
     timelineAgg.forEach((item) => {
-      const dStr = new Date(item._id.timestamp).toISOString().split('T')[0];
+      const dStr = getCampusDayStr(item._id.timestamp);
       if (!energyDailyMap[dStr]) {
         energyDailyMap[dStr] = { totalKWh: 0, snapshotCount: 0 };
       }
@@ -185,12 +193,11 @@ router.get('/', async (req, res, next) => {
     if (timelineAgg.length > 0) {
       const timeline = timelineAgg.map((item) => {
         const itemDate = new Date(item._id.timestamp);
-        const itemHour = itemDate.getUTCHours();
         
-        // Find closest solar interval on that same day
-        const dayStr = itemDate.toISOString().split('T')[0];
+        // Find closest solar interval on that same day in Asia/Kolkata
+        const dayStr = getCampusDayStr(itemDate);
         const sameDaySolarIntervals = solarIntervalAgg.filter(
-          (s) => new Date(s._id).toISOString().split('T')[0] === dayStr
+          (s) => getCampusDayStr(s._id) === dayStr
         );
         
         // Find solar reading closest in exact timestamp on that same day

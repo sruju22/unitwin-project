@@ -31,10 +31,15 @@ router.get('/', async (req, res, next) => {
       filter.timelineLabel = new RegExp(req.query.timelineLabel, 'i');
     }
     if (req.query.date) {
-      // Filter by YYYY-MM-DD
-      const start = new Date(`${req.query.date}T00:00:00.000Z`);
-      const end = new Date(`${req.query.date}T23:59:59.999Z`);
+      // Filter by YYYY-MM-DD in Asia/Kolkata
+      const start = new Date(`${req.query.date}T00:00:00+05:30`);
+      const end = new Date(`${req.query.date}T23:59:59.999+05:30`);
       filter.timestamp = { $gte: start, $lte: end };
+    } else if (req.query.asOfDate) {
+      const parsedDate = new Date(req.query.asOfDate);
+      if (!isNaN(parsedDate.getTime())) {
+        filter.timestamp = { ...(filter.timestamp || {}), $lte: parsedDate };
+      }
     }
 
     const limit = parseInt(req.query.limit, 10) || 300;
@@ -61,7 +66,7 @@ router.get('/', async (req, res, next) => {
         { $match: filter },
         {
           $group: {
-            _id: { $dateToString: { format: '%Y-%m-%d', date: '$timestamp' } },
+            _id: { $dateToString: { format: '%Y-%m-%d', date: '$timestamp', timezone: 'Asia/Kolkata' } },
             totalKWh: { $sum: '$energyGeneratedKWh' },
             readingsCount: { $sum: 1 },
             maxReadingKWh: { $max: '$energyGeneratedKWh' },
@@ -205,7 +210,7 @@ router.get('/summary', async (req, res, next) => {
       db.collection('solarGeneration').aggregate([
         {
           $group: {
-            _id: { $dateToString: { format: '%Y-%m-%d', date: '$timestamp' } },
+            _id: { $dateToString: { format: '%Y-%m-%d', date: '$timestamp', timezone: 'Asia/Kolkata' } },
             totalKWh: { $sum: '$energyGeneratedKWh' },
           },
         },

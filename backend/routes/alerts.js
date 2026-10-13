@@ -27,7 +27,12 @@ router.get('/', async (req, res, next) => {
         filter.prototype = true;
       }
     }
-    if (req.query.asOfDate) {
+    if (req.query.date) {
+      // Date in Asia/Kolkata (YYYY-MM-DD)
+      const start = new Date(`${req.query.date}T00:00:00+05:30`);
+      const end = new Date(`${req.query.date}T23:59:59.999+05:30`);
+      filter.timestamp = { ...(filter.timestamp || {}), $gte: start, $lte: end };
+    } else if (req.query.asOfDate) {
       const parsedDate = new Date(req.query.asOfDate);
       if (!isNaN(parsedDate.getTime())) {
         filter.timestamp = { ...(filter.timestamp || {}), $lte: parsedDate };

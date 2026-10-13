@@ -23,6 +23,17 @@ router.get('/', async (req, res, next) => {
     if (req.query.assetType) {
       filter.assetType = new RegExp(`^${req.query.assetType}$`, 'i');
     }
+    if (req.query.date) {
+      // Date in Asia/Kolkata (YYYY-MM-DD)
+      const start = new Date(`${req.query.date}T00:00:00+05:30`);
+      const end = new Date(`${req.query.date}T23:59:59.999+05:30`);
+      filter.reportedDate = { ...(filter.reportedDate || {}), $gte: start, $lte: end };
+    } else if (req.query.asOfDate) {
+      const parsedDate = new Date(req.query.asOfDate);
+      if (!isNaN(parsedDate.getTime())) {
+        filter.reportedDate = { ...(filter.reportedDate || {}), $lte: parsedDate };
+      }
+    }
 
     const limit = parseInt(req.query.limit, 10) || 100;
     // Query maintainence collection in Atlas

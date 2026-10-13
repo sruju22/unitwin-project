@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { getOccupancy, getBuildings, getRooms } from '../api/client';
+import { formatCampusDate, formatCampusTime } from '../utils/dateUtils';
 import Skeleton from '../components/Skeleton';
 import styles from './Occupancy.module.css';
 
@@ -11,6 +12,7 @@ export default function Occupancy() {
   const [loading, setLoading] = useState(true);
 
   // Filters
+  const [selectedSnapshot, setSelectedSnapshot] = useState('LATEST');
   const [selectedBuilding, setSelectedBuilding] = useState('ALL');
   const [selectedFloor, setSelectedFloor] = useState('ALL');
   const [selectedUtilization, setSelectedUtilization] = useState('ALL');
@@ -21,8 +23,12 @@ export default function Occupancy() {
     async function loadData() {
       try {
         setLoading(true);
+        const occParams = { limit: 500 };
+        if (selectedSnapshot !== 'LATEST') {
+          occParams.snapshotTimestamp = selectedSnapshot;
+        }
         const [occRes, bldRes, roomRes] = await Promise.allSettled([
-          getOccupancy({ limit: 400 }),
+          getOccupancy(occParams),
           getBuildings(),
           getRooms(),
         ]);
@@ -49,7 +55,16 @@ export default function Occupancy() {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [selectedSnapshot]);
+
+  const availableSnapshots = useMemo(() => {
+    if (!occupancySummary?.timeline) return [];
+    return [...occupancySummary.timeline].reverse();
+  }, [occupancySummary?.timeline]);
+
+  const activeSnapshotDate = occupancySummary?.timestamp
+    ? formatCampusDate(occupancySummary.timestamp)
+    : 'Oct 17, 2026';
 
   // Filtered rooms
   const filteredRooms = useMemo(() => {
@@ -85,7 +100,7 @@ export default function Occupancy() {
         <div>
           <div className={styles.titleRow}>
             <h1 className={styles.title}>Campus Occupancy &amp; Space Utilization</h1>
-            <span className={styles.datasetTag}>Pilot Telemetry · Oct 16 Snapshot</span>
+            <span className={styles.datasetTag}>Pilot Telemetry · {activeSnapshotDate} Snapshot</span>
           </div>
           <p className={styles.subtitle}>
             Room-by-room physical headcount, scheduled timetable alignment, and capacity utilization.
@@ -127,6 +142,24 @@ export default function Occupancy() {
 
       {/* Controls & Filter Bar */}
       <section className={styles.filterBar}>
+        <div className={styles.filterGroup}>
+          <label className={styles.filterLabel}>Snapshot:</label>
+          <select
+            value={selectedSnapshot}
+            onChange={(e) => setSelectedSnapshot(e.target.value)}
+            className={styles.selectInput}
+          >
+            <option value="LATEST">
+              Latest Telemetry ({activeSnapshotDate} · {occupancySummary?.snapshotLabel || 'Live'})
+            </option>
+            {availableSnapshots.map((snap) => (
+              <option key={snap.timestamp} value={snap.timestamp}>
+                {formatCampusDate(snap.timestamp)} · {snap.snapshotLabel} ({snap.roomCount || snap.totalOccupancy} {snap.roomCount ? 'rooms' : 'headcount'})
+              </option>
+            ))}
+          </select>
+        </div>
+
         <div className={styles.filterGroup}>
           <label className={styles.filterLabel}>Building:</label>
           <select
@@ -193,7 +226,7 @@ export default function Occupancy() {
             Cataloged Spaces ({filteredRooms.length} room{filteredRooms.length === 1 ? '' : 's'})
           </h3>
           <span className={styles.snapshotTag}>
-            Snapshot: {occupancySummary?.snapshotLabel || '01:45 PM IST'} (Oct 16, 2026)
+            Snapshot: {occupancySummary?.snapshotLabel || 'Live'} ({activeSnapshotDate})
           </span>
         </div>
 
