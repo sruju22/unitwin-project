@@ -23,7 +23,12 @@ router.get('/', async (req, res, next) => {
         filter.prototype = true;
       }
     }
-    if (req.query.date) {
+    if (req.query.snapshotTimestamp) {
+      const snapDate = new Date(req.query.snapshotTimestamp);
+      if (!isNaN(snapDate.getTime())) {
+        filter.timestamp = snapDate;
+      }
+    } else if (req.query.date) {
       // Filter by YYYY-MM-DD in Asia/Kolkata
       const start = new Date(`${req.query.date}T00:00:00+05:30`);
       const end = new Date(`${req.query.date}T23:59:59.999+05:30`);
@@ -49,6 +54,8 @@ router.get('/', async (req, res, next) => {
       solarLatestDocs,
       totalEnergyDocCount,
       totalSolarDocCount,
+      allDaysEnergyDailyAgg,
+      allDaysSolarDailyAgg,
     ] = await Promise.all([
       db.collection('energyUsage').find(filter).limit(limit).toArray(),
       
@@ -147,6 +154,29 @@ router.get('/', async (req, res, next) => {
 
       db.collection('energyUsage').countDocuments(filter),
       db.collection('solarGeneration').countDocuments(solarFilter),
+
+      // Multi-day daily energy aggregation across all monitoring days
+      db.collection('energyUsage').aggregate([
+        {
+          $group: {
+            _id: { $dateToString: { format: '%Y-%m-%d', date: '$timestamp', timezone: 'Asia/Kolkata' } },
+            totalKWh: { $sum: '$energyKWh' },
+            snapshotCount: { $sum: 1 },
+          },
+        },
+        { $sort: { _id: 1 } },
+      ]).toArray(),
+
+      // Multi-day daily solar aggregation across all monitoring days
+      db.collection('solarGeneration').aggregate([
+        {
+          $group: {
+            _id: { $dateToString: { format: '%Y-%m-%d', date: '$timestamp', timezone: 'Asia/Kolkata' } },
+            totalKWh: { $sum: '$energyGeneratedKWh' },
+          },
+        },
+        { $sort: { _id: 1 } },
+      ]).toArray(),
     ]);
 
     const simConfig = getSimulationConfig();
@@ -155,10 +185,15 @@ router.get('/', async (req, res, next) => {
       ? (simConfig.assumedInstalledCapacityKW / dbCapacity)
       : 1.0;
 
-    // Build solar lookup by date and hour
+    // Build solar lookup across all monitoring days
     const solarDateMap = {};
-    solarDailyAgg.forEach((d) => {
+    allDaysSolarDailyAgg.forEach((d) => {
       solarDateMap[d._id] = d.totalKWh * capacityScale;
+    });
+
+    const energyDailyMap = {};
+    allDaysEnergyDailyAgg.forEach((item) => {
+      energyDailyMap[item._id] = { totalKWh: item.totalKWh, snapshotCount: item.snapshotCount };
     });
 
     const rawSolarTotal = solarTotalAgg[0]?.totalKWh;
@@ -175,24 +210,7 @@ router.get('/', async (req, res, next) => {
 
     // Daily comparison table between energy consumption and solar generation
     const dailyComparison = [];
-    const getCampusDayStr = (dateVal) =>
-      new Intl.DateTimeFormat('en-CA', {
-        timeZone: 'Asia/Kolkata',
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit',
-      }).format(new Date(dateVal));
-
-    const energyDailyMap = {};
-    timelineAgg.forEach((item) => {
-      const dStr = getCampusDayStr(item._id.timestamp);
-      if (!energyDailyMap[dStr]) {
-        energyDailyMap[dStr] = { totalKWh: 0, snapshotCount: 0 };
-      }
-      energyDailyMap[dStr].totalKWh += item.totalEnergyKWh;
-      energyDailyMap[dStr].snapshotCount += 1;
-    });
-
+    const targetDayKey = req.query.date || null;
     const allDates = Array.from(new Set([...Object.keys(energyDailyMap), ...Object.keys(solarDateMap)])).sort();
     allDates.forEach((dStr) => {
       const consumed = Number((energyDailyMap[dStr]?.totalKWh || 0).toFixed(2));
@@ -207,8 +225,15 @@ router.get('/', async (req, res, next) => {
         netGridImportKWh: net,
         gridExportKWh: gridExport,
         solarContributionPct: pct,
+        isReportingDate: targetDayKey ? dStr === targetDayKey : false,
       });
     });
+
+    const selectedDayRow = targetDayKey ? dailyComparison.find((d) => d.date === targetDayKey) : null;
+    const dayEnergyConsumedKWh = selectedDayRow ? selectedDayRow.consumptionKWh : (targetDayKey ? 0 : totalConsumedKWh);
+    const daySolarYieldKWh = selectedDayRow ? selectedDayRow.solarGeneratedKWh : (targetDayKey ? 0 : solarTotalKWh);
+    const cumulativeCampusEnergyKWh = Number(allDaysEnergyDailyAgg.reduce((s, d) => s + (d.totalKWh || 0), 0).toFixed(2));
+    const cumulativeSolarGeneratedKWh = Number(allDaysSolarDailyAgg.reduce((s, d) => s + (d.totalKWh * capacityScale || 0), 0).toFixed(2));
 
     let summary = null;
     const hasTimelineData = timelineAgg.length > 0 || solarIntervalAgg.length > 0;
@@ -317,9 +342,10 @@ router.get('/', async (req, res, next) => {
       const { netImportKW: netDemand, gridExportKW: gridExport, solarOffsetPct: offsetPct } = calculateNetGridBalance(activeDemandKW, activeSolarKW);
 
       let reportingPeriod = 'Pilot Telemetry Baseline';
-      if (allDates.length === 1) {
-        const d = new Date(`${allDates[0]}T12:00:00+05:30`);
-        reportingPeriod = `${new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Kolkata', month: 'short', day: 'numeric', year: 'numeric' }).format(d)} (Single-day view)`;
+      if (targetDayKey) {
+        const d = new Date(`${targetDayKey}T12:00:00+05:30`);
+        const dayLabel = new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Kolkata', month: 'short', day: 'numeric', year: 'numeric' }).format(d);
+        reportingPeriod = `${dayLabel} (Single-day view)`;
       } else if (allDates.length > 1) {
         const firstD = new Date(`${allDates[0]}T12:00:00+05:30`);
         const lastD = new Date(`${allDates[allDates.length - 1]}T12:00:00+05:30`);
@@ -341,8 +367,13 @@ router.get('/', async (req, res, next) => {
         solarSystemCapacityKW: simConfig.assumedInstalledCapacityKW,
         totalCampusEnergyKWh: totalConsumedKWh,
         totalSolarGeneratedKWh: solarTotalKWh,
+        dayEnergyConsumedKWh,
+        daySolarYieldKWh,
+        cumulativeCampusEnergyKWh,
+        cumulativeSolarGeneratedKWh,
         overallSolarContributionPct,
         reportingPeriod,
+        reportingDate: targetDayKey,
         totalRecordsCount: totalEnergyDocCount,
         totalSolarRecordsCount: totalSolarDocCount,
         monitoringDaysCount: allDates.length,

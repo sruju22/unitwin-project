@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { getEnergyUsage } from '../../api/client';
 import {
   CAMPUS_TIMEZONE,
@@ -6,7 +6,6 @@ import {
   getCampusDayKey,
   formatCampusDate,
   formatCampusTime,
-  getDayOrdinal,
 } from '../../utils/dateUtils';
 import styles from './EnergyTelemetryChart.module.css';
 
@@ -36,8 +35,8 @@ function extractCleanTime(timestamp, label) {
   return label.replace(/\s*IST/i, '').trim();
 }
 
-export default function EnergyTelemetryChart() {
-  const [activeRange, setActiveRange] = useState('7d'); // 'today' | '24h' | '7d'
+export default function EnergyTelemetryChart({ reportingDate = '2026-10-14', onSelectDate }) {
+  const [activeRange, setActiveRange] = useState('today'); // 'today' | '24h' | '7d'
   const [scaleMode, setScaleMode] = useState('dual'); // 'dual' (default) | 'shared'
   const [rawTimeline, setRawTimeline] = useState([]);
   const [hoverIndex, setHoverIndex] = useState(null);
@@ -87,6 +86,11 @@ export default function EnergyTelemetryChart() {
     };
   }, []);
 
+  // Reset hover snapshot selection whenever reporting date or temporal range changes
+  useEffect(() => {
+    setHoverIndex(null);
+  }, [reportingDate, activeRange]);
+
   // Filter actual historical points in chronological order based on selected temporal window
   const energyData = useMemo(() => {
     if (!rawTimeline.length) return [];
@@ -96,29 +100,47 @@ export default function EnergyTelemetryChart() {
       (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
     );
 
-    const latestPoint = sorted.length > 0 ? sorted[sorted.length - 1] : null;
-    const latestTimestamp = latestPoint ? new Date(latestPoint.timestamp).getTime() : Date.now();
-    const latestCampusDayKey = latestPoint ? getCampusDayKey(latestPoint.timestamp) : getCampusDayKey(new Date());
+    // Anchor to the selected reporting date (e.g. '2026-10-14') in Asia/Kolkata
+    const targetDayKey = reportingDate || getCampusDayKey(new Date());
+    const dayEndMs = new Date(`${targetDayKey}T23:59:59.999+05:30`).getTime();
 
     let points = sorted;
     if (activeRange === 'today') {
-      // Readings strictly for the authoritative campus reporting day (Asia/Kolkata)
+      // Readings strictly for the selected campus reporting day (Asia/Kolkata)
       points = sorted.filter(
-        (p) => getCampusDayKey(p.timestamp) === latestCampusDayKey
+        (p) => getCampusDayKey(p.timestamp) === targetDayKey
       );
     } else if (activeRange === '24h') {
-      // Readings within 24-hour window relative to the latest available snapshot
+      // 24-hour telemetry window ending at the end of the reporting date
       const window24h = 24 * 60 * 60 * 1000;
       points = sorted.filter((p) => {
         const t = new Date(p.timestamp).getTime();
-        return latestTimestamp - t <= window24h && t <= latestTimestamp;
+        return t <= dayEndMs && dayEndMs - t <= window24h;
       });
     } else if (activeRange === '7d') {
-      // Full multi-day monitoring baseline (all available historical snapshots in chronological order)
-      points = sorted;
+      // 7-day baseline telemetry ending at the reporting date (prevents future date leakage)
+      const window7d = 7 * 24 * 60 * 60 * 1000;
+      points = sorted.filter((p) => {
+        const t = new Date(p.timestamp).getTime();
+        return t <= dayEndMs && dayEndMs - t <= window7d;
+      });
     }
 
-    return points.map((pt, idx) => {
+    // Deduplicate snapshots: ensure exactly one authoritative record per distinct observation time
+    const seenTimes = new Set();
+    const uniquePoints = [];
+    for (const pt of points) {
+      if (!pt || !pt.timestamp) continue;
+      const d = parseCampusDate(pt.timestamp);
+      const timeKey = d
+        ? `${getCampusDayKey(d)}-${d.getUTCHours()}:${d.getUTCMinutes()}`
+        : pt.timestamp;
+      if (seenTimes.has(timeKey)) continue;
+      seenTimes.add(timeKey);
+      uniquePoints.push(pt);
+    }
+
+    return uniquePoints.map((pt, idx) => {
       const d = parseCampusDate(pt.timestamp);
       const hasDemand = pt.hasDemand !== false && pt.demandKw !== null && pt.demandKw !== undefined;
       const hasSolar = pt.hasSolar !== false && pt.solarKw !== null && pt.solarKw !== undefined;
@@ -136,6 +158,23 @@ export default function EnergyTelemetryChart() {
       const timeLabel = pt.snapshotLabel || formatCampusTime(d);
       const cleanTime = extractCleanTime(pt.timestamp, timeLabel);
 
+      // Decompose snapshot label into primary clock time and period descriptor
+      let timeDisplay = timeLabel;
+      let periodDisplay = null;
+      if (timeLabel) {
+        const parenMatch = timeLabel.match(/^(.*?)\s*\(([^)]+)\)$/);
+        if (parenMatch) {
+          timeDisplay = parenMatch[1].trim();
+          periodDisplay = parenMatch[2].trim();
+        } else {
+          const dashMatch = timeLabel.match(/^(.*?\b(?:AM|PM|IST)\b)\s*[-–—]\s*(.+)$/i);
+          if (dashMatch) {
+            timeDisplay = dashMatch[1].trim();
+            periodDisplay = dashMatch[2].trim();
+          }
+        }
+      }
+
       return {
         id: idx,
         timestamp: pt.timestamp,
@@ -146,6 +185,8 @@ export default function EnergyTelemetryChart() {
         monthShort,
         year,
         timeLabel,
+        timeDisplay,
+        periodDisplay,
         cleanTime,
         fullLabel: `${fullDateLabel} · ${timeLabel}`,
         demand: demandVal,
@@ -157,7 +198,7 @@ export default function EnergyTelemetryChart() {
         solarOffsetPct: offsetVal,
       };
     });
-  }, [rawTimeline, activeRange]);
+  }, [rawTimeline, activeRange, reportingDate]);
 
   const hasData = energyData.length > 0;
 
@@ -168,10 +209,14 @@ export default function EnergyTelemetryChart() {
 
   // Dynamic concise subtitle based on active range and campus-local dates
   const chartSubtitle = useMemo(() => {
+    const formattedTarget = reportingDate
+      ? formatCampusDate(new Date(`${reportingDate}T12:00:00+05:30`), { includeYear: true })
+      : 'Selected date';
+
     if (!energyData.length) {
-      if (activeRange === 'today') return 'Campus reporting date · No snapshots';
-      if (activeRange === '24h') return '24h window · No snapshots';
-      return 'Multi-day baseline · No snapshots';
+      if (activeRange === 'today') return `${formattedTarget} · No telemetry recorded`;
+      if (activeRange === '24h') return `24h window ending ${formattedTarget} · No snapshots`;
+      return `7d baseline ending ${formattedTarget} · No snapshots`;
     }
 
     const firstPt = energyData[0];
@@ -192,7 +237,7 @@ export default function EnergyTelemetryChart() {
       ? firstPt.fullDateLabel
       : `${firstPt.dateLabel} – ${lastPt.fullDateLabel}`;
     return `${dateRange} baseline · ${snapshotCount} observed across ${daysCount} monitoring day${daysCount === 1 ? '' : 's'}`;
-  }, [activeRange, energyData]);
+  }, [activeRange, energyData, reportingDate]);
 
   // Chart coordinate parameters
   const w = 640;
@@ -224,7 +269,7 @@ export default function EnergyTelemetryChart() {
 
   // X coordinate mapping: begins at first actual snapshot, ends at last actual snapshot,
   // with 24px padding for point marker visibility without clipping
-  const getX = (idx) => {
+  const getX = useCallback((idx) => {
     if (!energyData.length || idx < 0 || idx >= energyData.length) return padL;
     if (energyData.length === 1) return padL + chartW / 2;
 
@@ -239,14 +284,14 @@ export default function EnergyTelemetryChart() {
     }
 
     return padL + xPad + (idx / (energyData.length - 1)) * innerW;
-  };
+  }, [energyData, padL, chartW, observationBounds]);
 
-  const getYDemand = (val) => {
+  const getYDemand = useCallback((val) => {
     const clamped = Math.max(0, Math.min(val, maxDemandVal));
     return padT + chartH - (clamped / maxDemandVal) * chartH;
-  };
+  }, [padT, chartH]);
 
-  const getYSolar = (val) => {
+  const getYSolar = useCallback((val) => {
     if (scaleMode === 'dual') {
       const clamped = Math.max(0, Math.min(val, maxSolarVal));
       return padT + chartH - (clamped / maxSolarVal) * chartH;
@@ -254,7 +299,7 @@ export default function EnergyTelemetryChart() {
     // Shared scale mode: Solar plotted on the same 0–200 kW scale
     const clamped = Math.max(0, Math.min(val, maxDemandVal));
     return padT + chartH - (clamped / maxDemandVal) * chartH;
-  };
+  }, [scaleMode, padT, chartH]);
 
   // Continuous pointer tracking across data points with zero jitter or gaps
   const handlePointer = (clientX) => {
@@ -299,35 +344,47 @@ export default function EnergyTelemetryChart() {
     const cx = getX(hoverIndex);
     const activePointPx = (cx / w) * containerWidth;
 
-    const tipWidth = containerWidth < 480 ? 176 : 192;
-    const tipHeight = 96;
-    const gap = 12;
+    // Content-aware width calculation
+    const isCompact = containerWidth < 460;
+    const tipWidth = isCompact
+      ? Math.max(200, Math.min(216, containerWidth - 28))
+      : containerWidth < 560
+      ? 240
+      : 264;
 
-    const isRightHalf = hoverIndex / Math.max(energyData.length - 1, 1) > 0.5;
+    // Content-aware height estimation to accommodate multi-line headers with period descriptors
+    const hasLongHeader = Boolean(
+      activePoint.periodDisplay || (activePoint.timeLabel && activePoint.timeLabel.length > 20)
+    );
+    const tipHeight = isCompact || hasLongHeader ? 134 : 122;
+    const gap = isCompact ? 10 : 12;
 
-    let tipLeftPx = isRightHalf
+    const spaceLeft = activePointPx - 8;
+    const spaceRight = containerWidth - activePointPx - 8;
+
+    // Prefer placing on the side with more available clearance
+    const placeOnLeft = spaceLeft >= spaceRight;
+
+    let tipLeftPx = placeOnLeft
       ? activePointPx - tipWidth - gap
       : activePointPx + gap;
 
     // Strict horizontal clamping to keep tooltip completely within container boundaries
-    tipLeftPx = Math.max(6, Math.min(containerWidth - tipWidth - 6, Math.round(tipLeftPx)));
+    tipLeftPx = Math.max(8, Math.min(containerWidth - tipWidth - 8, Math.round(tipLeftPx)));
 
-    const yDemand = activePoint.demand !== null ? getYDemand(activePoint.demand) : null;
-    const ySolar = activePoint.solar !== null ? getYSolar(activePoint.solar) : null;
-    const targetY = (yDemand !== null && ySolar !== null)
-      ? (yDemand + ySolar) / 2
-      : (yDemand !== null ? yDemand : (ySolar !== null ? ySolar : padT + chartH / 2));
-
-    // Strict vertical clamping to keep tooltip completely within container boundaries
-    const rawTop = targetY > 90 ? targetY - tipHeight + 15 : targetY - 15;
-    const tooltipTopPx = Math.max(6, Math.min(h - tipHeight - 6, Math.round(rawTop)));
+    // Vertical placement: Anchor in upper chart zone (top: 8px)
+    // Leaves the bottom 42px (y: 138px to 180px) completely open and unobstructed
+    // so X-axis tick marks, timestamps, and reporting dates are 100% visible at all times.
+    const tooltipTopPx = 8;
 
     return {
       tipLeftPx,
       tooltipTopPx,
       tipWidth,
+      tipHeight,
+      isCompact,
     };
-  }, [hoverIndex, activePoint, energyData.length, w, h, scaleMode, containerWidth, padT, chartH]);
+  }, [hoverIndex, activePoint, energyData.length, w, containerWidth, getX]);
 
   const isValidNumber = (val) =>
     typeof val === 'number' && !Number.isNaN(val) && Number.isFinite(val);
@@ -796,10 +853,17 @@ export default function EnergyTelemetryChart() {
                     width: `${tooltipParams.tipWidth}px`,
                   }}
                 >
-                  {/* Timestamp Header */}
-                  <div className={styles.tipHeader}>
-                    <span className={styles.tipTime}>{activePoint.timeLabel}</span>
-                    <span className={styles.tipDate}>{activePoint.fullDateLabel}</span>
+                  {/* Timestamp & Date Header */}
+                  <div className={`${styles.tipHeader} ${tooltipParams.isCompact ? styles.tipHeaderStacked : ''}`}>
+                    <div className={styles.tipTitleCol}>
+                      <span className={styles.tipTime}>{activePoint.timeDisplay || activePoint.timeLabel}</span>
+                      {activePoint.periodDisplay && (
+                        <span className={styles.tipPeriod}>({activePoint.periodDisplay})</span>
+                      )}
+                    </div>
+                    <div className={styles.tipDateCol}>
+                      <span className={styles.tipDate}>{activePoint.fullDateLabel}</span>
+                    </div>
                   </div>
 
                   <div className={styles.tipDivider} />
@@ -845,7 +909,10 @@ export default function EnergyTelemetryChart() {
 
                   {/* Row 3: Net Grid Import */}
                   <div className={styles.tipMetricRow}>
-                    <span className={styles.tipMetricNameSub}>Net Grid Import</span>
+                    <div className={styles.tipMetricLabelCol}>
+                      <span className={styles.tipNetDot} />
+                      <span className={styles.tipMetricNameSub}>Net Grid Import</span>
+                    </div>
                     <div className={styles.tipMetricValCol}>
                       {activePoint.netImport !== null ? (
                         <>
@@ -860,7 +927,10 @@ export default function EnergyTelemetryChart() {
 
                   {/* Row 4: Solar Offset */}
                   <div className={styles.tipMetricRow}>
-                    <span className={styles.tipMetricNameSub}>Solar Offset</span>
+                    <div className={styles.tipMetricLabelCol}>
+                      <span className={styles.tipOffsetDot} />
+                      <span className={styles.tipMetricNameSub}>Solar Offset</span>
+                    </div>
                     <div className={styles.tipMetricValCol}>
                       {activePoint.solarOffsetPct !== null ? (
                         <>
@@ -868,7 +938,7 @@ export default function EnergyTelemetryChart() {
                           <span className={styles.tipUnit}>%</span>
                         </>
                       ) : (
-                        '—'
+                        <span className={styles.tipOffsetVal}>—</span>
                       )}
                     </div>
                   </div>
@@ -916,12 +986,35 @@ export default function EnergyTelemetryChart() {
               </div>
               <div className={styles.awaitingTextCol}>
                 <div className={styles.awaitingHeadingRow}>
-                  <h4 className={styles.awaitingHeading}>Awaiting Energy Telemetry Feed</h4>
-                  <span className={styles.awaitingTag}>Meters Standby</span>
+                  <h4 className={styles.awaitingHeading}>
+                    {reportingDate
+                      ? `No Telemetry Logged for ${formatCampusDate(new Date(`${reportingDate}T12:00:00+05:30`), { includeYear: true })}`
+                      : 'Awaiting Energy Telemetry Feed'}
+                  </h4>
+                  <span className={styles.awaitingTag}>No Readings</span>
                 </div>
                 <p className={styles.awaitingDesc}>
-                  Smart meter and solar telemetry are currently awaiting connection. Performance curves will display when telemetry streams are active.
+                  Smart meter and solar telemetry have no recorded readings for this reporting date. Select an active telemetry date to inspect performance curves:
                 </p>
+                {onSelectDate && (
+                  <div className={styles.awaitingActionsRow}>
+                    <button
+                      type="button"
+                      className={styles.awaitingDateBtn}
+                      onClick={() => onSelectDate('2026-10-14')}
+                    >
+                      <span className={styles.awaitingDot} />
+                      Oct 14, 2026 (Active)
+                    </button>
+                    <button
+                      type="button"
+                      className={styles.awaitingDateBtn}
+                      onClick={() => onSelectDate('2026-10-17')}
+                    >
+                      Oct 17, 2026
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           </div>

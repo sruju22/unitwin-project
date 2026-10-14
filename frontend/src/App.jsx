@@ -27,6 +27,30 @@ export default function App() {
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
   const [alertCount, setAlertCount] = useState(0);
 
+  // Central dashboard reporting date context (Default: Wednesday, October 14, 2026)
+  const [reportingDate, setReportingDate] = useState(() => {
+    try {
+      const stored = sessionStorage.getItem('unitwin_reporting_date');
+      if (stored && /^\d{4}-\d{2}-\d{2}$/.test(stored)) return stored;
+      const urlParams = new URLSearchParams(window.location.search);
+      const qDate = urlParams.get('date');
+      if (qDate && /^\d{4}-\d{2}-\d{2}$/.test(qDate)) return qDate;
+    } catch {
+      // ignore
+    }
+    return '2026-10-14';
+  });
+
+  const handleSelectDate = (newDate) => {
+    if (!newDate || typeof newDate !== 'string') return;
+    setReportingDate(newDate);
+    try {
+      sessionStorage.setItem('unitwin_reporting_date', newDate);
+    } catch {
+      // ignore
+    }
+  };
+
   // Fetch verified critical alerts count for badge display from MongoDB
   useEffect(() => {
     let isMounted = true;
@@ -93,11 +117,27 @@ export default function App() {
   };
 
   function renderPage() {
-    if (activePage === 'dashboard') return <Dashboard onNavigate={handleNavigate} />;
+    if (activePage === 'dashboard') {
+      return (
+        <Dashboard
+          onNavigate={handleNavigate}
+          reportingDate={reportingDate}
+          onSelectDate={handleSelectDate}
+        />
+      );
+    }
     if (activePage === 'campus') return <Campus />;
-    if (activePage === 'analytics') return <Analytics onNavigate={handleNavigate} />;
-    if (activePage === 'occupancy') return <Occupancy />;
-    if (activePage === 'energy') return <Energy onNavigate={handleNavigate} />;
+    if (activePage === 'analytics') return <Analytics onNavigate={handleNavigate} reportingDate={reportingDate} onSelectDate={handleSelectDate} />;
+    if (activePage === 'occupancy') return <Occupancy reportingDate={reportingDate} onSelectDate={handleSelectDate} />;
+    if (activePage === 'energy') {
+      return (
+        <Energy
+          onNavigate={handleNavigate}
+          reportingDate={reportingDate}
+          onSelectDate={handleSelectDate}
+        />
+      );
+    }
     if (activePage === 'congestion') return <Congestion />;
     if (activePage === 'maintenance') return <Maintenance />;
     if (activePage === 'alerts') return <Alerts />;
@@ -119,6 +159,8 @@ export default function App() {
           activePage={activePage}
           onOpenCommandPalette={() => setCommandPaletteOpen(true)}
           alertCount={alertCount}
+          reportingDate={reportingDate}
+          onSelectDate={handleSelectDate}
         />
         <main className="page-content" id="main-content">
           {renderPage()}
@@ -136,7 +178,7 @@ export default function App() {
       {activePage !== 'campus' && (
         <FloatingAiChat
           activePage={activePage}
-          onNavigate={handleNavigate}
+          reportingDate={reportingDate}
         />
       )}
     </div>

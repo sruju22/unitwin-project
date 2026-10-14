@@ -75,12 +75,15 @@ function formatDisplayTime(date) {
  */
 function resolveDateContext({ asOfDate, message = '' }) {
   // 1. Establish the base reporting reference time
+  // The digital twin live dataset runs through the pilot baseline ending Saturday, October 17, 2026.
+  const PILOT_LATEST_DATE = new Date('2026-10-17T23:59:59.999+05:30');
   let reportingDate;
   if (asOfDate) {
     const parsed = new Date(asOfDate);
-    reportingDate = !isNaN(parsed.getTime()) ? parsed : new Date();
+    reportingDate = !isNaN(parsed.getTime()) ? parsed : PILOT_LATEST_DATE;
   } else {
-    reportingDate = new Date();
+    // If no explicit asOfDate is provided, anchor to the authoritative latest date of the pilot baseline
+    reportingDate = Date.now() > PILOT_LATEST_DATE.getTime() ? new Date() : PILOT_LATEST_DATE;
   }
 
   const reportingCutoff = new Date(reportingDate.getTime());

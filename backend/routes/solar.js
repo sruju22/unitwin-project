@@ -30,7 +30,12 @@ router.get('/', async (req, res, next) => {
     if (req.query.timelineLabel) {
       filter.timelineLabel = new RegExp(req.query.timelineLabel, 'i');
     }
-    if (req.query.date) {
+    if (req.query.snapshotTimestamp) {
+      const snapDate = new Date(req.query.snapshotTimestamp);
+      if (!isNaN(snapDate.getTime())) {
+        filter.timestamp = snapDate;
+      }
+    } else if (req.query.date) {
       // Filter by YYYY-MM-DD in Asia/Kolkata
       const start = new Date(`${req.query.date}T00:00:00+05:30`);
       const end = new Date(`${req.query.date}T23:59:59.999+05:30`);

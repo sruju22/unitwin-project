@@ -8,7 +8,7 @@ import { getBuildings, getOccupancy, getEnergyUsage, getAlerts, getInsights } fr
 import { formatCampusDate } from '../utils/dateUtils';
 import styles from './Dashboard.module.css';
 
-export default function Dashboard({ onNavigate }) {
+export default function Dashboard({ onNavigate, reportingDate = '2026-10-14', onSelectDate }) {
   const [buildings, setBuildings] = useState([]);
   const [occupancySummary, setOccupancySummary] = useState(null);
   const [energySummary, setEnergySummary] = useState(null);
@@ -23,13 +23,14 @@ export default function Dashboard({ onNavigate }) {
 
     async function loadDashboardData() {
       try {
-        const asOfDate = new Date().toISOString();
+        setLoading(true);
+        // Synchronously bind all telemetry streams to the selected reporting date
         const [bldRes, occRes, nrgRes, alrRes, insRes] = await Promise.allSettled([
           getBuildings(),
-          getOccupancy({ asOfDate }),
-          getEnergyUsage(),
-          getAlerts({ asOfDate }),
-          getInsights(),
+          getOccupancy({ date: reportingDate }),
+          getEnergyUsage({ date: reportingDate }),
+          getAlerts({ asOfDate: `${reportingDate}T23:59:59.999+05:30` }),
+          getInsights({ date: reportingDate }),
         ]);
 
         if (isMounted) {
@@ -37,15 +38,15 @@ export default function Dashboard({ onNavigate }) {
             setBuildings(bldRes.value.data);
             setDbConnected(true);
           }
-          if (occRes.status === 'fulfilled') {
-            if (occRes.value?.summary) {
-              setOccupancySummary(occRes.value.summary);
-            }
+          if (occRes.status === 'fulfilled' && occRes.value?.summary) {
+            setOccupancySummary(occRes.value.summary);
+          } else {
+            setOccupancySummary(null);
           }
-          if (nrgRes.status === 'fulfilled') {
-            if (nrgRes.value?.summary) {
-              setEnergySummary(nrgRes.value.summary);
-            }
+          if (nrgRes.status === 'fulfilled' && nrgRes.value?.summary) {
+            setEnergySummary(nrgRes.value.summary);
+          } else {
+            setEnergySummary(null);
           }
           if (alrRes.status === 'fulfilled' && Array.isArray(alrRes.value?.data)) {
             const valid = alrRes.value.data.filter((a) => {
@@ -55,12 +56,15 @@ export default function Dashboard({ onNavigate }) {
               return Boolean(title || detail);
             });
             setAlerts(valid);
-            if (alrRes.value?.summary) {
-              setAlertsSummary(alrRes.value.summary);
-            }
+            setAlertsSummary(alrRes.value?.summary || null);
+          } else {
+            setAlerts([]);
+            setAlertsSummary(null);
           }
           if (insRes.status === 'fulfilled' && Array.isArray(insRes.value?.data)) {
             setInsights(insRes.value.data);
+          } else {
+            setInsights([]);
           }
         }
       } catch (err) {
@@ -74,7 +78,7 @@ export default function Dashboard({ onNavigate }) {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [reportingDate]);
 
   // Compute metrics from actual database collections or surveyed inventory
   const totalBuildings = buildings.length || 21;
@@ -105,6 +109,9 @@ export default function Dashboard({ onNavigate }) {
     ),
   };
 
+  const occDateLabel = occupancySummary?.timestamp
+    ? formatCampusDate(occupancySummary.timestamp)
+    : formatCampusDate(reportingDate);
   const occupancyKPI = occupancySummary
     ? {
         id: 'occupancy',
@@ -114,7 +121,7 @@ export default function Dashboard({ onNavigate }) {
         delta: 'Pilot Telemetry',
         deltaUp: true,
         accent: 'green',
-        secondaryText: `${occupancySummary.totalOccupancy.toLocaleString()} Present · ${occupancySummary.totalCapacity.toLocaleString()} Cap`,
+        secondaryText: `${occupancySummary.totalOccupancy.toLocaleString()} Present · ${occupancySummary.totalCapacity.toLocaleString()} Cap · ${occDateLabel}, ${occupancySummary.snapshotLabel || 'Daytime'}`,
         sparkline: (occupancySummary.timeline || []).map((t) => t.utilization),
         loading: loading,
         icon: (
@@ -131,10 +138,10 @@ export default function Dashboard({ onNavigate }) {
         title: 'Campus Occupancy',
         value: '—',
         unit: 'Awaiting data',
-        delta: 'Sensors Offline',
+        delta: 'No Readings',
         deltaUp: null,
         accent: 'green',
-        secondaryText: 'No live occupancy stream',
+        secondaryText: `No occupancy telemetry for ${formatCampusDate(reportingDate)}`,
         sparkline: null,
         loading: loading,
         icon: (
@@ -147,7 +154,9 @@ export default function Dashboard({ onNavigate }) {
         ),
       };
 
-  const energyDateLabel = energySummary?.timestamp ? formatCampusDate(energySummary.timestamp) : null;
+  const energyDateLabel = energySummary?.timestamp
+    ? formatCampusDate(energySummary.timestamp)
+    : formatCampusDate(reportingDate);
   const energyKPI = energySummary
     ? {
         id: 'energy',
@@ -157,7 +166,7 @@ export default function Dashboard({ onNavigate }) {
         delta: 'Pilot Baseline',
         deltaUp: true,
         accent: 'teal',
-        secondaryText: `${energySummary.latestEnergyKwh} kWh interval · ${energyDateLabel ? `${energyDateLabel}, ` : ''}${energySummary.snapshotLabel}`,
+        secondaryText: `${energySummary.latestEnergyKwh} kWh interval · ${energyDateLabel}, ${energySummary.snapshotLabel}`,
         sparkline: (energySummary.timeline || []).map((t) => t.demandKw),
         loading: loading,
         icon: (
@@ -171,10 +180,10 @@ export default function Dashboard({ onNavigate }) {
         title: 'Active Power Demand (kW)',
         value: '—',
         unit: 'Awaiting data',
-        delta: 'Meters Offline',
+        delta: 'No Readings',
         deltaUp: null,
         accent: 'teal',
-        secondaryText: 'No active meter telemetry',
+        secondaryText: `No meter telemetry recorded for ${formatCampusDate(reportingDate)}`,
         sparkline: null,
         loading: loading,
         icon: (
@@ -199,7 +208,7 @@ export default function Dashboard({ onNavigate }) {
         delta: `${highPriorityAlertsCount} High Priority`,
         deltaUp: false,
         accent: highPriorityAlertsCount > 0 ? 'red' : 'green',
-        secondaryText: `${alerts.length} Total Incidents · Pilot Feed`,
+        secondaryText: `${alerts.length} Total Incidents as of ${formatCampusDate(reportingDate)}`,
         sparkline: [12, 14, 18, 15, 20, 22, highPriorityAlertsCount],
         loading: loading,
         icon: (
@@ -218,7 +227,7 @@ export default function Dashboard({ onNavigate }) {
         delta: 'All Clear',
         deltaUp: true,
         accent: 'green',
-        secondaryText: 'No critical alarms reported',
+        secondaryText: `No active alarms for ${formatCampusDate(reportingDate)}`,
         sparkline: [0, 0, 0, 0, 0, 0, 0],
         loading: loading,
         icon: (
@@ -250,13 +259,55 @@ export default function Dashboard({ onNavigate }) {
             <div className={styles.bannerTitleRow}>
               <h2 className={styles.bannerTitle}>Campus Operations Overview</h2>
               <span className={styles.systemStatusTag}>
-                {dbConnected ? 'Database Connected · Pilot Dataset' : 'Awaiting Connection'}
+                {dbConnected ? 'Database Connected' : 'Awaiting Connection'}
+              </span>
+              <span className={styles.activeDateTag}>
+                {formatCampusDate(reportingDate, { includeYear: true })}
               </span>
             </div>
             <p className={styles.bannerSubtitle}>
-              Executive overview · {totalBuildings || 10} Buildings Monitored · Oct 12–17 Telemetry Baseline
+              Executive digital twin · {totalBuildings || 10} Buildings Monitored · October 12–17 Pilot Baseline
             </p>
           </div>
+        </div>
+
+        {/* Synchronized Reporting Date Selector */}
+        <div className={styles.dateSelectorGroup} role="group" aria-label="Select reporting date">
+          <span className={styles.dateSelectorLabel}>Date:</span>
+          {[
+            { date: '2026-10-12', label: 'Oct 12' },
+            { date: '2026-10-13', label: 'Oct 13' },
+            { date: '2026-10-14', label: 'Oct 14' },
+            { date: '2026-10-15', label: 'Oct 15' },
+            { date: '2026-10-16', label: 'Oct 16' },
+            { date: '2026-10-17', label: 'Oct 17' },
+          ].map((pill) => (
+            <button
+              key={pill.date}
+              type="button"
+              className={`${styles.datePill} ${reportingDate === pill.date ? styles.datePillActive : ''}`}
+              onClick={() => onSelectDate?.(pill.date)}
+              title={`Switch dashboard to ${pill.label}`}
+            >
+              {pill.label}
+            </button>
+          ))}
+          {/* Custom Date Input for No-Data Testing */}
+          <label className={styles.customDateWrapper} title="Test custom date (e.g. Oct 18 for missing data test)">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+              <line x1="16" y1="2" x2="16" y2="6" />
+              <line x1="8" y1="2" x2="8" y2="6" />
+              <line x1="3" y1="10" x2="21" y2="10" />
+            </svg>
+            <input
+              type="date"
+              className={styles.customDateInput}
+              value={reportingDate}
+              onChange={(e) => e.target.value && onSelectDate?.(e.target.value)}
+              aria-label="Pick custom reporting date"
+            />
+          </label>
         </div>
       </section>
 
@@ -270,7 +321,10 @@ export default function Dashboard({ onNavigate }) {
       {/* Row 1: Energy & Solar Performance + Clean Campus Aerial Preview */}
       <section className={styles.contentRow} aria-label="Energy & Solar Performance & Campus Overview">
         <div className={styles.leftCol}>
-          <EnergyTelemetryChart />
+          <EnergyTelemetryChart
+            reportingDate={reportingDate}
+            onSelectDate={onSelectDate}
+          />
         </div>
         <div className={styles.rightCol}>
           <CampusAerialTwinCard
@@ -284,7 +338,10 @@ export default function Dashboard({ onNavigate }) {
       {/* Row 2: Alerts & Incidents + Campus Intelligence */}
       <section className={styles.contentRow} aria-label="Alerts & Incidents & Campus Intelligence">
         <div className={styles.leftCol}>
-          <AlertsCommandPanel onNavigateToAlerts={() => onNavigate('alerts')} />
+          <AlertsCommandPanel
+            onNavigateToAlerts={() => onNavigate('alerts')}
+            reportingDate={reportingDate}
+          />
         </div>
         <div className={styles.rightCol}>
           <CampusIntelligencePanel

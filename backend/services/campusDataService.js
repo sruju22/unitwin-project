@@ -32,7 +32,8 @@ function getEffectiveCutoff(query = {}, dateContext = null) {
     const parsed = new Date(query.asOfDate);
     if (!isNaN(parsed.getTime())) return parsed;
   }
-  return new Date();
+  const pilotLatest = new Date('2026-10-17T23:59:59.999+05:30');
+  return Date.now() > pilotLatest.getTime() ? new Date() : pilotLatest;
 }
 
 /**

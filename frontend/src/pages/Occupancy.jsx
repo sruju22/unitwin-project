@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { getOccupancy, getBuildings, getRooms } from '../api/client';
-import { formatCampusDate, formatCampusTime } from '../utils/dateUtils';
+import { formatCampusDate } from '../utils/dateUtils';
 import { getRoomDisplayName, hasDesignatedLabName } from '../utils/roomUtils';
 import Skeleton from '../components/Skeleton';
 import styles from './Occupancy.module.css';
@@ -103,6 +103,8 @@ export default function Occupancy() {
 
   const activeSnapshotDate = occupancySummary?.timestamp
     ? formatCampusDate(occupancySummary.timestamp)
+    : occupancyData[0]?.timestamp
+    ? formatCampusDate(occupancyData[0].timestamp)
     : 'Oct 17, 2026';
 
   // Filtered rooms

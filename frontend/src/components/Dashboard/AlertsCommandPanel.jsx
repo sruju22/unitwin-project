@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { getAlerts } from '../../api/client';
+import { formatCampusDate, parseCampusDate } from '../../utils/dateUtils';
 import styles from './AlertsCommandPanel.module.css';
 
 const SEVERITY_CONFIG = {
@@ -28,12 +29,17 @@ function formatAlertTime(timestamp) {
     if (isNaN(date.getTime())) return 'Active';
     const now = new Date();
     const diffMs = now - date;
+    if (diffMs < 0) {
+      const dStr = date.toLocaleDateString('en-US', { timeZone: 'Asia/Kolkata', month: 'short', day: 'numeric' });
+      const tStr = date.toLocaleTimeString('en-US', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', hour12: true });
+      return `${dStr}, ${tStr}`;
+    }
     const diffMins = Math.floor(diffMs / 60000);
     if (diffMins < 1) return 'Just now';
     if (diffMins < 60) return `${diffMins}m ago`;
     const diffHours = Math.floor(diffMins / 60);
     if (diffHours < 24) return `${diffHours}h ago`;
-    return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+    return date.toLocaleDateString('en-US', { timeZone: 'Asia/Kolkata', month: 'short', day: 'numeric' });
   } catch {
     return 'Active';
   }
@@ -51,15 +57,24 @@ function filterValidAlerts(rawAlerts) {
   });
 }
 
-export default function AlertsCommandPanel({ onNavigateToAlerts }) {
+export default function AlertsCommandPanel({ onNavigateToAlerts, reportingDate = '2026-10-14' }) {
   const [alerts, setAlerts] = useState([]);
   const [actionFeedback, setActionFeedback] = useState(null);
+
+  const reportingDateLabel = useMemo(() => {
+    if (!reportingDate) return null;
+    const d = parseCampusDate(reportingDate);
+    return d ? formatCampusDate(d, { includeYear: true }) : reportingDate;
+  }, [reportingDate]);
 
   useEffect(() => {
     let isMounted = true;
     async function fetchAlertsData() {
       try {
-        const res = await getAlerts();
+        const queryParams = reportingDate
+          ? { asOfDate: `${reportingDate}T23:59:59.999+05:30` }
+          : {};
+        const res = await getAlerts(queryParams);
         if (isMounted) {
           if (res && Array.isArray(res.data)) {
             const valid = filterValidAlerts(res.data);
@@ -77,7 +92,7 @@ export default function AlertsCommandPanel({ onNavigateToAlerts }) {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [reportingDate]);
 
   const handleAcknowledge = (id) => {
     setAlerts((prev) =>
@@ -122,7 +137,9 @@ export default function AlertsCommandPanel({ onNavigateToAlerts }) {
           </div>
           <div>
             <h3 className={styles.title}>Alerts &amp; Incidents</h3>
-            <p className={styles.subtitle}>Active exceptions requiring operational response</p>
+            <p className={styles.subtitle}>
+              Active exceptions requiring operational response{reportingDateLabel ? ` · ${reportingDateLabel}` : ''}
+            </p>
           </div>
         </div>
 
@@ -232,7 +249,9 @@ export default function AlertsCommandPanel({ onNavigateToAlerts }) {
             <div className={styles.nominalContent}>
               <h4 className={styles.nominalTitle}>No Active Alerts</h4>
               <p className={styles.nominalDetail}>
-                All systems nominal. No critical alarms or active incident reports requiring operational response.
+                {reportingDateLabel
+                  ? `All systems nominal as of ${reportingDateLabel}. No critical alarms or active incident reports requiring operational response.`
+                  : 'All systems nominal. No critical alarms or active incident reports requiring operational response.'}
               </p>
             </div>
           </div>

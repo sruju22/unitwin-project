@@ -1,8 +1,7 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
-import { searchCampus, getAlerts, getMaintenance, getRooms } from '../api/client';
+import { searchCampus } from '../api/client';
 import { getLogicalBuildings } from '../data/buildingRegistry';
 import { CAMPUS_STATIC_ROOMS as STATIC_ROOMS } from '../data/cblockData';
-import { getRoomDisplayName } from '../utils/roomUtils';
 import styles from './CommandPalette.module.css';
 
 // Storage key for recent destinations
@@ -252,11 +251,23 @@ export default function CommandPalette({ isOpen, onClose, onSelectPage }) {
   const [backendResults, setBackendResults] = useState(null);
   const [isSearching, setIsSearching] = useState(false);
   const [searchError, setSearchError] = useState(null);
+  const [activeTab, setActiveTab] = useState('navigation'); // 'navigation' | 'history'
 
   const inputRef = useRef(null);
   const listRef = useRef(null);
   const previousActiveElementRef = useRef(null);
   const requestIdRef = useRef(0);
+
+  // Unified reset and close handler: thoroughly resets all search and navigation state
+  const handleClose = useCallback(() => {
+    setQuery('');
+    setSelectedIndex(0);
+    setBackendResults(null);
+    setIsSearching(false);
+    setSearchError(null);
+    setActiveTab('navigation');
+    onClose();
+  }, [onClose]);
 
   // 1. ESCAPE KEY & FOCUS RESTORATION ROOT CAUSE FIX
   // Intercept Escape and Cmd+K globally in the capture phase.
@@ -274,11 +285,11 @@ export default function CommandPalette({ isOpen, onClose, onSelectPage }) {
       if (e.key === 'Escape') {
         e.preventDefault();
         e.stopPropagation();
-        onClose();
+        handleClose();
       } else if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
         e.preventDefault();
         e.stopPropagation();
-        onClose();
+        handleClose();
       }
     };
 
@@ -295,9 +306,9 @@ export default function CommandPalette({ isOpen, onClose, onSelectPage }) {
         }
       }
     };
-  }, [isOpen, onClose]);
+  }, [isOpen, handleClose]);
 
-  // Reset query and load recents when opened
+  // Reset query, state, and tabs whenever opened or closed
   useEffect(() => {
     if (isOpen) {
       setQuery('');
@@ -305,6 +316,7 @@ export default function CommandPalette({ isOpen, onClose, onSelectPage }) {
       setBackendResults(null);
       setIsSearching(false);
       setSearchError(null);
+      setActiveTab('navigation');
       try {
         const stored = sessionStorage.getItem(RECENT_DESTINATIONS_KEY);
         if (stored) {
@@ -316,6 +328,14 @@ export default function CommandPalette({ isOpen, onClose, onSelectPage }) {
       } catch {
         setRecentItems([]);
       }
+    } else {
+      // Clean up when closed so reopening begins fresh
+      setQuery('');
+      setSelectedIndex(0);
+      setBackendResults(null);
+      setIsSearching(false);
+      setSearchError(null);
+      setActiveTab('navigation');
     }
   }, [isOpen]);
 
@@ -343,7 +363,7 @@ export default function CommandPalette({ isOpen, onClose, onSelectPage }) {
           }
           setIsSearching(false);
         }
-      } catch (err) {
+      } catch {
         if (requestIdRef.current === currentRequestId) {
           setSearchError('Live database search offline. Displaying local campus directory.');
           setIsSearching(false);
@@ -365,59 +385,67 @@ export default function CommandPalette({ isOpen, onClose, onSelectPage }) {
   const { groupedResults, flatFilteredItems } = useMemo(() => {
     const q = query.trim().toLowerCase();
 
-    // CASE 1: Empty Query -> Recents + Navigation + Featured Facilities
+    // CASE 1: Empty Query -> Clean Suggestions + Navigation Shortcuts (No recent items or hardcoded facilities!)
     if (!q) {
-      const groups = [];
-      const flat = [];
-
-      // Section A: Recent Destinations
-      if (recentItems.length > 0) {
-        const recentGroup = {
-          category: 'Recent Destinations',
-          items: recentItems.slice(0, 4),
+      if (activeTab === 'history' && recentItems.length > 0) {
+        const historyGroup = {
+          category: 'Search History',
+          items: recentItems.map((item) => ({
+            ...item,
+            actionTag: item.actionTag || 'Revisit',
+            iconType: item.iconType || 'recent',
+          })),
         };
-        groups.push(recentGroup);
-        flat.push(...recentGroup.items);
+        return { groupedResults: [historyGroup], flatFilteredItems: historyGroup.items };
       }
 
-      // Section B: Core Navigation Modules
+      // Default Clean Navigation View: Only core Campus Navigation routes
+      const navItems = NAVIGATION_ROUTES.map((r) => ({
+        ...r,
+        title: r.label,
+        subtitle: `${r.badge} • #${r.page}`,
+        description: r.desc,
+      }));
+
       const navGroup = {
         category: 'Campus Navigation',
-        items: NAVIGATION_ROUTES,
+        items: navItems,
       };
-      groups.push(navGroup);
-      flat.push(...navGroup.items);
 
-      // Section C: Featured Facilities
-      const coreFacilityCodes = ['B01', 'B02', 'B06', 'B07', 'B08'];
-      const featured = fallbackBuildings
-        .filter((b) => coreFacilityCodes.includes(b.id))
-        .map((b) => ({
-          id: `featured-${b.id}`,
-          title: `${b.name} (${b.id})`,
-          subtitle: `${b.type} • Official Facility`,
-          description: b.description || 'Surveyed campus infrastructure',
-          actionTag: 'Locate',
-          iconType: 'building',
-          page: 'campus',
-          params: { buildingId: b.id },
-        }));
-
-      if (featured.length > 0) {
-        const facilityGroup = {
-          category: 'Featured Facilities',
-          items: featured.slice(0, 4),
-        };
-        groups.push(facilityGroup);
-        flat.push(...facilityGroup.items);
-      }
-
-      return { groupedResults: groups, flatFilteredItems: flat };
+      return { groupedResults: [navGroup], flatFilteredItems: navItems };
     }
 
     // CASE 2: Query Entered
     const groups = [];
     const flat = [];
+
+    // Optional Search History match (if query contains "history" or "recent" or matches previous item title)
+    if (recentItems.length > 0) {
+      const isHistoryKeyword = q === 'recent' || q === 'history';
+      const matchedRecent = recentItems
+        .filter((it) => {
+          if (!it || !it.title) return false;
+          if (isHistoryKeyword) return true;
+          return (
+            it.title.toLowerCase().includes(q) ||
+            (it.subtitle && it.subtitle.toLowerCase().includes(q))
+          );
+        })
+        .map((it) => ({
+          ...it,
+          actionTag: 'Revisit',
+          iconType: it.iconType || 'recent',
+        }));
+
+      if (matchedRecent.length > 0) {
+        const historyGroup = {
+          category: 'Search History',
+          items: matchedRecent,
+        };
+        groups.push(historyGroup);
+        flat.push(...matchedRecent);
+      }
+    }
 
     // Category 1: Navigation matches (Filtered immediately with 0ms delay)
     const matchedNav = NAVIGATION_ROUTES.filter((route) => {
@@ -443,77 +471,31 @@ export default function CommandPalette({ isOpen, onClose, onSelectPage }) {
 
     // Category 2: Backend Search Results
     if (backendResults) {
-      // Buildings
-      if (backendResults.buildings && backendResults.buildings.length > 0) {
-        const bldGroup = {
-          category: 'Campus Buildings',
-          items: backendResults.buildings.map((b) => ({ ...b, iconType: 'building' })),
-        };
-        groups.push(bldGroup);
-        flat.push(...bldGroup.items);
-      }
+      const addCategory = (category, rawItems, defaultIcon) => {
+        if (!Array.isArray(rawItems) || rawItems.length === 0) return;
+        const valid = rawItems
+          .filter((it) => it && Boolean((it.title || it.label)?.trim()))
+          .map((it) => ({
+            ...it,
+            title: (it.title || it.label).trim(),
+            iconType: it.iconType || defaultIcon,
+          }));
+        if (valid.length > 0) {
+          const group = { category, items: valid };
+          groups.push(group);
+          flat.push(...valid);
+        }
+      };
 
-      // Rooms
-      if (backendResults.rooms && backendResults.rooms.length > 0) {
-        const roomGroup = {
-          category: 'Rooms & Laboratories',
-          items: backendResults.rooms.map((r) => ({ ...r, iconType: 'room' })),
-        };
-        groups.push(roomGroup);
-        flat.push(...roomGroup.items);
-      }
-
-      // Space Occupancy
-      if (backendResults.occupancy && backendResults.occupancy.length > 0) {
-        const occGroup = {
-          category: 'Space Occupancy & Headcount',
-          items: backendResults.occupancy.map((o) => ({ ...o, iconType: 'occupancy' })),
-        };
-        groups.push(occGroup);
-        flat.push(...occGroup.items);
-      }
-
-      // Alerts
-      if (backendResults.alerts && backendResults.alerts.length > 0) {
-        const alertGroup = {
-          category: 'Operational Alerts',
-          items: backendResults.alerts.map((a) => ({ ...a, iconType: 'alert-item' })),
-        };
-        groups.push(alertGroup);
-        flat.push(...alertGroup.items);
-      }
-
-      // Maintenance
-      if (backendResults.maintenance && backendResults.maintenance.length > 0) {
-        const maintGroup = {
-          category: 'Maintenance Work Orders',
-          items: backendResults.maintenance.map((m) => ({ ...m, iconType: 'maint-item' })),
-        };
-        groups.push(maintGroup);
-        flat.push(...maintGroup.items);
-      }
-
-      // Energy
-      if (backendResults.energy && backendResults.energy.length > 0) {
-        const energyGroup = {
-          category: 'Energy & Solar Telemetry',
-          items: backendResults.energy.map((e) => ({ ...e, iconType: 'energy' })),
-        };
-        groups.push(energyGroup);
-        flat.push(...energyGroup.items);
-      }
-
-      // Campus Areas
-      if (backendResults.areas && backendResults.areas.length > 0) {
-        const areaGroup = {
-          category: 'Campus Grounds & Outdoor Areas',
-          items: backendResults.areas.map((a) => ({ ...a, iconType: 'area' })),
-        };
-        groups.push(areaGroup);
-        flat.push(...areaGroup.items);
-      }
+      addCategory('Campus Buildings', backendResults.buildings, 'building');
+      addCategory('Rooms & Laboratories', backendResults.rooms, 'room');
+      addCategory('Space Occupancy & Headcount', backendResults.occupancy, 'occupancy');
+      addCategory('Operational Alerts', backendResults.alerts, 'alert-item');
+      addCategory('Maintenance Work Orders', backendResults.maintenance, 'maint-item');
+      addCategory('Energy & Solar Telemetry', backendResults.energy, 'energy');
+      addCategory('Campus Grounds & Outdoor Areas', backendResults.areas, 'area');
     } else {
-      // In-flight / Offline fallback: Local building & room matches while waiting or if offline
+      // In-flight or offline fallback: Local building & room matches while waiting or if offline
       const matchedLocalB = fallbackBuildings
         .filter((b) => b.name.toLowerCase().includes(q) || b.id.toLowerCase().includes(q) || b.type.toLowerCase().includes(q))
         .slice(0, 4)
@@ -537,20 +519,19 @@ export default function CommandPalette({ isOpen, onClose, onSelectPage }) {
         flat.push(...localBGroup.items);
       }
 
-      // Local room matches (e.g. C101)
+      // Local room matches (e.g. C101, CV Raman Lab)
       const cleanQ = q.replace(/[^a-zA-Z0-9]/g, '');
       const matchedLocalR = STATIC_ROOMS
         .filter((r) => {
           const name = (r.roomName || r.label || '').toLowerCase();
           return (
-            r.id.toLowerCase().includes(cleanQ) ||
+            (cleanQ.length >= 2 && r.id.toLowerCase().includes(cleanQ)) ||
             name.includes(q) ||
             r.type.toLowerCase().includes(q)
           );
         })
         .slice(0, 4)
         .map((r) => {
-          const labName = getRoomDisplayName(r);
           const displayTitle = r.roomName ? `${r.id} — ${r.roomName}` : (r.label || `${r.id} — ${r.type}`);
           return {
             id: `local-room-${r.id}`,
@@ -575,16 +556,20 @@ export default function CommandPalette({ isOpen, onClose, onSelectPage }) {
     }
 
     return { groupedResults: groups, flatFilteredItems: flat };
-  }, [query, backendResults, recentItems, fallbackBuildings]);
+  }, [query, backendResults, recentItems, fallbackBuildings, activeTab]);
 
   // Keep selectedIndex clamped when results update
   useEffect(() => {
     setSelectedIndex(0);
-  }, [query, backendResults]);
+  }, [query, backendResults, activeTab]);
 
-  // Scroll active item smoothly into view
+  // Scroll active item smoothly into view (keeping top anchored at index 0)
   useEffect(() => {
     if (!isOpen) return;
+    if (selectedIndex === 0 && listRef.current) {
+      listRef.current.scrollTop = 0;
+      return;
+    }
     const activeEl = listRef.current?.querySelector(`[data-index="${selectedIndex}"]`);
     if (activeEl) {
       activeEl.scrollIntoView({ block: 'nearest' });
@@ -594,20 +579,21 @@ export default function CommandPalette({ isOpen, onClose, onSelectPage }) {
   // Save selected destination to sessionStorage recents
   const saveRecentDestination = useCallback((item) => {
     try {
+      if (!item || (!item.title && !item.label)) return;
       const itemToSave = {
-        id: item.id,
-        title: item.title,
-        subtitle: item.subtitle,
-        description: item.description,
-        actionTag: item.actionTag,
+        id: item.id || `dest-${Date.now()}`,
+        title: (item.title || item.label).trim(),
+        subtitle: item.subtitle || (item.badge ? `${item.badge} • #${item.page}` : 'Campus Destination'),
+        description: item.description || item.desc || '',
+        actionTag: item.actionTag || 'Inspect',
         page: item.destination?.page || item.page,
         params: item.destination?.params || item.params,
-        iconType: item.iconType,
+        iconType: item.iconType || 'recent',
         timestamp: Date.now(),
       };
 
       const existing = JSON.parse(sessionStorage.getItem(RECENT_DESTINATIONS_KEY) || '[]');
-      const filtered = existing.filter((it) => it.id !== item.id);
+      const filtered = Array.isArray(existing) ? existing.filter((it) => it.id !== itemToSave.id) : [];
       const updated = [itemToSave, ...filtered].slice(0, 5);
       sessionStorage.setItem(RECENT_DESTINATIONS_KEY, JSON.stringify(updated));
       setRecentItems(updated);
@@ -623,10 +609,10 @@ export default function CommandPalette({ isOpen, onClose, onSelectPage }) {
       saveRecentDestination(item);
       const targetPage = item.destination?.page || item.page;
       const targetParams = item.destination?.params || item.params;
+      handleClose();
       onSelectPage(targetPage, targetParams);
-      onClose();
     },
-    [onSelectPage, onClose, saveRecentDestination]
+    [onSelectPage, handleClose, saveRecentDestination]
   );
 
   // Keyboard navigation inside the palette
@@ -634,19 +620,19 @@ export default function CommandPalette({ isOpen, onClose, onSelectPage }) {
     if (e.key === 'Escape') {
       e.preventDefault();
       e.stopPropagation();
-      onClose();
+      handleClose();
       return;
     }
 
     if (e.key === 'ArrowDown') {
       e.preventDefault();
       setSelectedIndex((prev) =>
-        prev < flatFilteredItems.length - 1 ? prev + 1 : 0
+        flatFilteredItems.length > 0 ? (prev < flatFilteredItems.length - 1 ? prev + 1 : 0) : 0
       );
     } else if (e.key === 'ArrowUp') {
       e.preventDefault();
       setSelectedIndex((prev) =>
-        prev > 0 ? prev - 1 : flatFilteredItems.length - 1
+        flatFilteredItems.length > 0 ? (prev > 0 ? prev - 1 : flatFilteredItems.length - 1) : 0
       );
     } else if (e.key === 'Enter') {
       e.preventDefault();
@@ -665,7 +651,7 @@ export default function CommandPalette({ isOpen, onClose, onSelectPage }) {
       className={styles.backdrop}
       onClick={(e) => {
         if (e.target === e.currentTarget) {
-          onClose();
+          handleClose();
         }
       }}
       role="dialog"
@@ -697,7 +683,12 @@ export default function CommandPalette({ isOpen, onClose, onSelectPage }) {
             className={styles.input}
             placeholder="Search campus buildings, rooms (C101, CV Raman Lab), alerts, maintenance, occupancy..."
             value={query}
-            onChange={(e) => setQuery(e.target.value)}
+            onChange={(e) => {
+              setQuery(e.target.value);
+              if (activeTab === 'history') {
+                setActiveTab('navigation');
+              }
+            }}
             onKeyDown={handleInputKeyDown}
             aria-autocomplete="list"
             autoComplete="off"
@@ -715,6 +706,7 @@ export default function CommandPalette({ isOpen, onClose, onSelectPage }) {
               onClick={() => {
                 setQuery('');
                 setBackendResults(null);
+                setActiveTab('navigation');
                 inputRef.current?.focus();
               }}
               title="Clear search query"
@@ -730,13 +722,44 @@ export default function CommandPalette({ isOpen, onClose, onSelectPage }) {
           <button
             type="button"
             className={styles.closeEscapeBtn}
-            onClick={onClose}
+            onClick={handleClose}
             title="Press Escape to close"
             aria-label="Close palette"
           >
             ESC
           </button>
         </div>
+
+        {/* Dedicated Suggested Chips Section (anchored cleanly directly below searchHeader) */}
+        {!query.trim() && activeTab === 'navigation' && (
+          <div className={styles.suggestedContainer}>
+            <span className={styles.suggestedLabel}>Suggested:</span>
+            <div className={styles.suggestedChips}>
+              {[
+                'C-Block',
+                'CV Raman Lab',
+                'Library',
+                'CAED Lab',
+                'Critical Alerts',
+                'Solar PV',
+                'Active Work Orders',
+                'Occupancy',
+              ].map((hint) => (
+                <button
+                  key={hint}
+                  type="button"
+                  className={styles.suggestedChip}
+                  onClick={() => {
+                    setQuery(hint);
+                    inputRef.current?.focus();
+                  }}
+                >
+                  {hint}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Offline Notice banner if backend search had an issue */}
         {searchError && (
@@ -752,21 +775,97 @@ export default function CommandPalette({ isOpen, onClose, onSelectPage }) {
 
         {/* Categorized results list */}
         <div ref={listRef} className={styles.resultsList}>
+
+          {/* Empty History State when in History view with no recents */}
+          {activeTab === 'history' && recentItems.length === 0 && (
+            <div className={styles.emptyHistoryState}>
+              <p>No recent destinations recorded in this session.</p>
+              <button
+                type="button"
+                className={styles.backNavBtn}
+                onClick={() => setActiveTab('navigation')}
+              >
+                ← Back to Campus Navigation
+              </button>
+            </div>
+          )}
+
+          {/* Searching spinner state when waiting for initial backend results */}
+          {isSearching && flatFilteredItems.length === 0 && (
+            <div className={styles.searchingState}>
+              <div className={styles.spinner} />
+              <span>Searching campus database...</span>
+            </div>
+          )}
+
           {groupedResults.map((group) => {
             const groupHeader = (
               <div key={`header-${group.category}`} className={styles.sectionHeading}>
-                <span>{group.category}</span>
-                <span className={styles.categoryCount}>{group.items.length}</span>
+                <div className={styles.headingLeft}>
+                  <span>{group.category}</span>
+                  <span className={styles.categoryCount}>{group.items.length}</span>
+                </div>
+                {group.category === 'Campus Navigation' && recentItems.length > 0 && (
+                  <button
+                    type="button"
+                    className={styles.historyPillBtn}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setActiveTab('history');
+                    }}
+                    title="View recently inspected destinations"
+                  >
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+                      <circle cx="12" cy="12" r="10" />
+                      <polyline points="12 6 12 12 16 14" />
+                    </svg>
+                    <span>Recent History ({recentItems.length})</span>
+                  </button>
+                )}
+                {group.category === 'Search History' && (
+                  <div className={styles.historyActions}>
+                    <button
+                      type="button"
+                      className={styles.backNavBtn}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setActiveTab('navigation');
+                      }}
+                    >
+                      ← Back to Navigation
+                    </button>
+                    <button
+                      type="button"
+                      className={styles.clearHistoryBtn}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        try {
+                          sessionStorage.removeItem(RECENT_DESTINATIONS_KEY);
+                        } catch {
+                          /* ignore storage errors */
+                        }
+                        setRecentItems([]);
+                        setActiveTab('navigation');
+                      }}
+                      title="Clear search history"
+                    >
+                      Clear History
+                    </button>
+                  </div>
+                )}
               </div>
             );
 
             const itemsElements = group.items.map((item) => {
+              const itemTitle = (item.title || item.label || '').trim();
+              if (!itemTitle) return null;
+
               const itemIndex = runningIndex++;
               const isSelected = itemIndex === selectedIndex;
 
               return (
                 <button
-                  key={item.id}
+                  key={item.id || `item-${itemIndex}`}
                   data-index={itemIndex}
                   className={`${styles.resultItem} ${isSelected ? styles.selected : ''}`}
                   onClick={() => handleSelect(item)}
@@ -780,7 +879,7 @@ export default function CommandPalette({ isOpen, onClose, onSelectPage }) {
                   <div className={styles.itemDetails}>
                     <div className={styles.labelRow}>
                       <span className={styles.itemLabel}>
-                        {highlightMatch(item.title, query)}
+                        {highlightMatch(itemTitle, query)}
                       </span>
                       {item.subtitle && (
                         <span className={styles.categoryBadge}>
@@ -812,7 +911,7 @@ export default function CommandPalette({ isOpen, onClose, onSelectPage }) {
           })}
 
           {/* Zero results fallback with interactive suggestions */}
-          {flatFilteredItems.length === 0 && !isSearching && (
+          {flatFilteredItems.length === 0 && !isSearching && activeTab !== 'history' && (
             <div className={styles.noResults}>
               <div className={styles.noResultsIcon}>
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">

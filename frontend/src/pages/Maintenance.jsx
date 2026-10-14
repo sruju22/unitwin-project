@@ -192,7 +192,12 @@ export default function Maintenance() {
         <div className={styles.kpiCard}>
           <span className={styles.kpiLabel}>Open Tickets</span>
           <span className={styles.kpiValue} style={{ color: '#F59E0B' }}>
-            {loading ? <Skeleton width="50px" height="32px" /> : summary?.openCount || 29}
+            {loading ? (
+              <Skeleton width="50px" height="32px" />
+            ) : (
+              summary?.openCount ??
+              records.filter((r) => (r.status || '').toLowerCase() === 'open').length
+            )}
           </span>
           <span className={styles.kpiSub}>Awaiting crew assignment</span>
         </div>
@@ -202,7 +207,10 @@ export default function Maintenance() {
             {loading ? (
               <Skeleton width="50px" height="32px" />
             ) : (
-              (summary?.inProgressCount || 7) + (summary?.scheduledCount || 10)
+              (summary?.inProgressCount ??
+                records.filter((r) => (r.status || '').toLowerCase() === 'in progress').length) +
+              (summary?.scheduledCount ??
+                records.filter((r) => (r.status || '').toLowerCase() === 'scheduled').length)
             )}
           </span>
           <span className={styles.kpiSub}>Active repairs &amp; technician dispatches</span>
@@ -210,7 +218,12 @@ export default function Maintenance() {
         <div className={styles.kpiCard}>
           <span className={styles.kpiLabel}>High Priority</span>
           <span className={styles.kpiValue} style={{ color: '#EF4444' }}>
-            {loading ? <Skeleton width="50px" height="32px" /> : summary?.highPriorityCount || 5}
+            {loading ? (
+              <Skeleton width="50px" height="32px" />
+            ) : (
+              summary?.highPriorityCount ??
+              records.filter((r) => (r.priority || '').toLowerCase() === 'high').length
+            )}
           </span>
           <span className={styles.kpiSub}>Urgent facility intervention</span>
         </div>

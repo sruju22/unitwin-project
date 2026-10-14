@@ -1,5 +1,6 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { sendChatMessage, getAiStatus } from '../../api/client';
+import { formatCampusDate, parseCampusDate } from '../../utils/dateUtils';
 import styles from './FloatingAiChat.module.css';
 
 /**
@@ -104,21 +105,20 @@ function FormattedMessage({ text }) {
   return <div className={styles.markdownContent}>{elements}</div>;
 }
 
-export default function FloatingAiChat({ activePage = 'dashboard', onNavigate }) {
+export default function FloatingAiChat({ activePage = 'dashboard', reportingDate = '2026-10-14' }) {
   const [isOpen, setIsOpen] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [aiStatus, setAiStatus] = useState(null);
 
-  const reportingDateLabel = new Date().toLocaleDateString('en-US', {
+  const reportingDateObj = useMemo(() => parseCampusDate(reportingDate) || new Date(), [reportingDate]);
+  const reportingDateLabel = useMemo(() => formatCampusDate(reportingDateObj, {
     weekday: 'long',
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-  });
+    includeYear: true,
+  }), [reportingDateObj]);
 
-  const initialWelcomeMessage = {
+  const initialWelcomeMessage = useMemo(() => ({
     id: 'welcome-0',
     role: 'assistant',
     text: `### Welcome to Campus AI
@@ -134,14 +134,14 @@ You can ask me about:
 - **Facility Maintenance & Congestion** (open work orders, pedestrian flow)`,
     domain: 'Executive Campus Overview',
     sources: [{ name: 'MongoDB Atlas Digital Twin', collection: 'Telemetry Clusters' }],
-    reportingPeriod: `${new Date().toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}`,
+    reportingPeriod: reportingDateLabel,
     suggestedFollowUps: [
       'What is our current energy demand and solar output?',
       'Show campus headcount and overall room utilization.',
       'Are there any critical operational alerts right now?',
     ],
     timestamp: 'Live Baseline',
-  };
+  }), [reportingDateLabel]);
 
   const [messages, setMessages] = useState(() => {
     try {
@@ -234,7 +234,7 @@ You can ask me about:
       const payload = {
         message: textToSend,
         pageContext: activePage,
-        asOfDate: new Date().toISOString(),
+        asOfDate: reportingDate ? `${reportingDate}T23:59:59.999+05:30` : undefined,
         history: newMessages.slice(-6).map((m) => ({
           role: m.role,
           text: m.text,
@@ -413,7 +413,7 @@ You can ask me about:
                   </span>
                 </div>
                 <span className={styles.headerSubtitle}>
-                  Smart Campus Operations Assistant
+                  Smart Operations · {formatCampusDate(reportingDateObj, { month: 'short', day: 'numeric', includeYear: true })}
                 </span>
               </div>
             </div>

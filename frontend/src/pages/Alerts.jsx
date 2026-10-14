@@ -208,14 +208,28 @@ export default function Alerts() {
         <div className={styles.kpiCard}>
           <span className={styles.kpiLabel}>High Severity Alarms</span>
           <span className={styles.kpiValue} style={{ color: 'var(--status-critical)' }}>
-            {loading ? <Skeleton width="50px" height="32px" /> : summary?.highSeverityCount || 72}
+            {loading ? (
+              <Skeleton width="50px" height="32px" />
+            ) : (
+              summary?.highSeverityCount ??
+              alerts.filter(
+                (a) => (a.severity || '').toLowerCase() === 'high' || (a.severity || '').toLowerCase() === 'critical'
+              ).length
+            )}
           </span>
           <span className={styles.kpiSub}>Urgent response recommended</span>
         </div>
         <div className={styles.kpiCard}>
           <span className={styles.kpiLabel}>Medium Priority Warnings</span>
           <span className={styles.kpiValue} style={{ color: 'var(--status-warning)' }}>
-            {loading ? <Skeleton width="50px" height="32px" /> : summary?.mediumSeverityCount || 71}
+            {loading ? (
+              <Skeleton width="50px" height="32px" />
+            ) : (
+              summary?.mediumSeverityCount ??
+              alerts.filter(
+                (a) => (a.severity || '').toLowerCase() === 'medium' || (a.severity || '').toLowerCase() === 'warning'
+              ).length
+            )}
           </span>
           <span className={styles.kpiSub}>Operational baseline drifts</span>
         </div>

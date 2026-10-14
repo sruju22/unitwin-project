@@ -1,3 +1,4 @@
+import { parseCampusDate } from '../utils/dateUtils';
 import styles from './Header.module.css';
 
 const PAGE_TITLES = {
@@ -11,12 +12,21 @@ const PAGE_TITLES = {
   alerts:      { title: 'Alerts',      subtitle: 'System notifications and warnings' },
 };
 
-export default function Header({ activePage, onOpenCommandPalette, alertCount = 0 }) {
+export default function Header({
+  activePage,
+  onOpenCommandPalette,
+  alertCount = 0,
+  reportingDate = '2026-10-14',
+  onSelectDate,
+}) {
   const { title, subtitle } = PAGE_TITLES[activePage] || PAGE_TITLES.dashboard;
-  const now = new Date();
-  const dateStr = now.toLocaleDateString('en-US', {
+  const dateObj = parseCampusDate(reportingDate) || new Date();
+  const dateStr = dateObj.toLocaleDateString('en-US', {
     timeZone: 'Asia/Kolkata',
-    weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
   });
 
   return (
@@ -29,8 +39,23 @@ export default function Header({ activePage, onOpenCommandPalette, alertCount = 
 
       {/* Right Controls */}
       <div className={styles.controls}>
-        {/* Date */}
-        <span className={styles.dateChip}>{dateStr}</span>
+        {/* Date Selector */}
+        <label className={styles.dateChip} title="Campus reporting date (Click to change)">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={styles.calendarIcon}>
+            <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+            <line x1="16" y1="2" x2="16" y2="6" />
+            <line x1="8" y1="2" x2="8" y2="6" />
+            <line x1="3" y1="10" x2="21" y2="10" />
+          </svg>
+          <span className={styles.dateText}>{dateStr}</span>
+          <input
+            type="date"
+            className={styles.dateInput}
+            value={reportingDate}
+            onChange={(e) => onSelectDate && e.target.value && onSelectDate(e.target.value)}
+            aria-label="Select reporting date"
+          />
+        </label>
 
         {/* Search & Command Palette Trigger */}
         <div

@@ -4,7 +4,7 @@ import { formatCampusDate, formatCampusDateTime } from '../utils/dateUtils';
 import Skeleton from '../components/Skeleton';
 import styles from './Energy.module.css';
 
-export default function Energy({ onNavigate }) {
+export default function Energy({ onNavigate, reportingDate = '2026-10-14', onSelectDate }) {
   const [energyData, setEnergyData] = useState(null);
   const [solarData, setSolarData] = useState(null);
   const [energyAlerts, setEnergyAlerts] = useState([]);
@@ -17,17 +17,21 @@ export default function Energy({ onNavigate }) {
       try {
         setLoading(true);
         const [energyRes, solarRes, alertsRes] = await Promise.allSettled([
-          getEnergyUsage(),
-          getSolarGeneration(),
-          getAlerts(),
+          getEnergyUsage({ date: reportingDate }),
+          getSolarGeneration({ date: reportingDate }),
+          getAlerts({ asOfDate: `${reportingDate}T23:59:59.999+05:30` }),
         ]);
 
         if (isMounted) {
           if (energyRes.status === 'fulfilled' && energyRes.value) {
             setEnergyData(energyRes.value);
+          } else {
+            setEnergyData(null);
           }
           if (solarRes.status === 'fulfilled' && solarRes.value) {
             setSolarData(solarRes.value);
+          } else {
+            setSolarData(null);
           }
           if (alertsRes.status === 'fulfilled' && Array.isArray(alertsRes.value?.data)) {
             const filtered = alertsRes.value.data.filter(
@@ -36,6 +40,8 @@ export default function Energy({ onNavigate }) {
                 (a.alertType || '').toLowerCase().includes('solar')
             );
             setEnergyAlerts(filtered);
+          } else {
+            setEnergyAlerts([]);
           }
         }
       } catch (err) {
@@ -49,10 +55,12 @@ export default function Energy({ onNavigate }) {
     return () => {
       isMounted = false;
     };
-  }, [refreshKey]);
+  }, [reportingDate, refreshKey]);
 
   const energySummary = energyData?.summary || null;
   const solarSummary = solarData?.summary || null;
+  const hasEnergyData = Boolean(energySummary && energyData?.count > 0);
+  const hasSolarData = Boolean(solarSummary && (solarData?.count > 0 || solarSummary?.latestSnapshot?.timestamp));
   const dailyComparison = energySummary?.dailyComparison || [];
   const appliances = energySummary?.appliances || [];
   const panels = solarSummary?.panels || [];
@@ -74,27 +82,69 @@ export default function Energy({ onNavigate }) {
           <div className={styles.titleRow}>
             <h1 className={styles.title}>Campus Energy &amp; Solar PV Performance</h1>
             <span className={styles.datasetTag}>
-              MongoDB Atlas · {energySummary?.totalRecordsCount?.toLocaleString() || '43,344'} Energy &amp; {solarData?.count || solarSummary?.totalRecordsCount || 2100} Solar Records
+              MongoDB Atlas · {hasEnergyData ? (energySummary?.totalRecordsCount?.toLocaleString() || '7,224') : '0'} Energy &amp; {hasSolarData ? (solarData?.count || solarSummary?.totalRecordsCount || 350) : 0} Solar Records
             </span>
           </div>
           <p className={styles.subtitle}>
             Main Building electrical sub-meter telemetry coupled with rooftop Solar001 photovoltaic generation and net grid import tracking.
           </p>
         </div>
-        <div className={styles.headerActions}>
-          <button
-            type="button"
-            className={styles.refreshBtn}
-            onClick={() => setRefreshKey((k) => k + 1)}
-            title="Refresh database streams"
-          >
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-              <polyline points="23 4 23 10 17 10" />
-              <polyline points="1 20 1 14 7 14" />
-              <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
-            </svg>
-            <span>Sync Data</span>
-          </button>
+
+        <div className={styles.headerRightCol}>
+          {/* Synchronized Reporting Date Selector */}
+          <div className={styles.dateSelectorGroup} role="group" aria-label="Select reporting date">
+            <span className={styles.dateSelectorLabel}>Date:</span>
+            {[
+              { date: '2026-10-12', label: 'Oct 12' },
+              { date: '2026-10-13', label: 'Oct 13' },
+              { date: '2026-10-14', label: 'Oct 14' },
+              { date: '2026-10-15', label: 'Oct 15' },
+              { date: '2026-10-16', label: 'Oct 16' },
+              { date: '2026-10-17', label: 'Oct 17' },
+            ].map((pill) => (
+              <button
+                key={pill.date}
+                type="button"
+                className={`${styles.datePill} ${reportingDate === pill.date ? styles.datePillActive : ''}`}
+                onClick={() => onSelectDate?.(pill.date)}
+                title={`Switch energy report to ${pill.label}`}
+              >
+                {pill.label}
+              </button>
+            ))}
+            {/* Custom Date Input for No-Data Testing */}
+            <label className={styles.customDateWrapper} title="Test custom date (e.g. Oct 18 for missing data test)">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+                <line x1="16" y1="2" x2="16" y2="6" />
+                <line x1="8" y1="2" x2="8" y2="6" />
+                <line x1="3" y1="10" x2="21" y2="10" />
+              </svg>
+              <input
+                type="date"
+                className={styles.customDateInput}
+                value={reportingDate}
+                onChange={(e) => e.target.value && onSelectDate?.(e.target.value)}
+                aria-label="Pick custom reporting date"
+              />
+            </label>
+          </div>
+
+          <div className={styles.headerActions}>
+            <button
+              type="button"
+              className={styles.refreshBtn}
+              onClick={() => setRefreshKey((k) => k + 1)}
+              title="Refresh database streams"
+            >
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                <polyline points="23 4 23 10 17 10" />
+                <polyline points="1 20 1 14 7 14" />
+                <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
+              </svg>
+              <span>Sync Data</span>
+            </button>
+          </div>
         </div>
       </section>
 
@@ -102,19 +152,23 @@ export default function Energy({ onNavigate }) {
       <section className={styles.kpiGrid}>
         {/* Card 1: Total Campus Consumption */}
         <div className={styles.kpiCard}>
-          <span className={styles.kpiLabel}>Total Campus Consumption</span>
+          <span className={styles.kpiLabel}>Campus Day Consumption</span>
           <div className={styles.kpiValueRow}>
             <span className={styles.kpiValue}>
               {loading ? (
                 <Skeleton width="90px" height="32px" />
+              ) : hasEnergyData ? (
+                (energySummary.dayEnergyConsumedKWh ?? energySummary.totalCampusEnergyKWh ?? 0).toLocaleString()
               ) : (
-                (energySummary?.totalCampusEnergyKWh || 3668.7).toLocaleString()
+                '—'
               )}
             </span>
             <span className={styles.kpiUnit}>kWh</span>
           </div>
           <span className={styles.kpiSub}>
-            {energySummary?.reportingPeriod || 'Oct 12–17, 2026 (Baseline)'}
+            {hasEnergyData
+              ? `${formatCampusDate(reportingDate, { includeYear: true })} (Day Total)`
+              : `No readings logged for ${formatCampusDate(reportingDate)}`}
           </span>
         </div>
 
@@ -125,14 +179,18 @@ export default function Energy({ onNavigate }) {
             <span className={styles.kpiValue}>
               {loading ? (
                 <Skeleton width="80px" height="32px" />
+              ) : hasSolarData ? (
+                (solarSummary?.totalGeneratedKWh ?? energySummary?.daySolarYieldKWh ?? energySummary?.totalSolarGeneratedKWh ?? 0).toLocaleString()
               ) : (
-                (solarSummary?.totalGeneratedKWh || energySummary?.totalSolarGeneratedKWh || 435.1).toLocaleString()
+                '—'
               )}
             </span>
             <span className={styles.kpiUnit}>kWh</span>
           </div>
           <span className={styles.kpiSub}>
-            {solarSummary?.reportingPeriod || energySummary?.reportingPeriod || 'Oct 12–17, 2026 (Simulated)'}
+            {hasSolarData
+              ? `${formatCampusDate(reportingDate, { includeYear: true })} (Simulated Yield)`
+              : `No solar yield for ${formatCampusDate(reportingDate)}`}
           </span>
         </div>
 
@@ -143,14 +201,18 @@ export default function Energy({ onNavigate }) {
             <span className={styles.kpiValue}>
               {loading ? (
                 <Skeleton width="80px" height="32px" />
+              ) : hasEnergyData && energySummary.latestDemandKw !== null ? (
+                energySummary.latestDemandKw
               ) : (
-                energySummary?.latestDemandKw ?? 33.4
+                '—'
               )}
             </span>
             <span className={styles.kpiUnit}>kW</span>
           </div>
           <span className={styles.kpiSub}>
-            Latest snapshot: {energySummary?.snapshotLabel || '05:00 PM IST'}
+            {hasEnergyData
+              ? `Latest snapshot: ${energySummary.snapshotLabel} (${formatCampusDate(energySummary.timestamp || reportingDate)})`
+              : `Awaiting telemetry feed for ${formatCampusDate(reportingDate)}`}
           </span>
         </div>
 
@@ -161,16 +223,20 @@ export default function Energy({ onNavigate }) {
             <span className={styles.kpiValue} style={{ color: '#0F9D8A' }}>
               {loading ? (
                 <Skeleton width="80px" height="32px" />
+              ) : hasEnergyData && typeof energySummary.solarKw === 'number' ? (
+                energySummary.solarKw.toFixed(2)
+              ) : hasSolarData && typeof solarSummary?.currentSolarPowerKW === 'number' ? (
+                solarSummary.currentSolarPowerKW.toFixed(2)
               ) : (
-                typeof energySummary?.solarKw === 'number'
-                  ? energySummary.solarKw.toFixed(2)
-                  : (solarSummary?.latestSnapshot?.currentSolarPowerKW ?? 1.6)
+                '—'
               )}
             </span>
             <span className={styles.kpiUnit}>kW</span>
           </div>
           <span className={styles.kpiSub}>
-            Latest snapshot: {energySummary?.snapshotLabel || '05:00 PM IST'} [SIM]
+            {hasEnergyData
+              ? `Latest snapshot: ${energySummary.snapshotLabel} [SIM]`
+              : `Standby for ${formatCampusDate(reportingDate)}`}
           </span>
         </div>
 
@@ -181,14 +247,18 @@ export default function Energy({ onNavigate }) {
             <span className={styles.kpiValue}>
               {loading ? (
                 <Skeleton width="80px" height="32px" />
+              ) : hasEnergyData && energySummary.netImportKw !== null ? (
+                energySummary.netImportKw
               ) : (
-                energySummary?.netImportKw ?? 31.8
+                '—'
               )}
             </span>
             <span className={styles.kpiUnit}>kW</span>
           </div>
           <span className={styles.kpiSub}>
-            Latest snapshot: {energySummary?.snapshotLabel || '05:00 PM IST'}
+            {hasEnergyData
+              ? `Latest snapshot: ${energySummary.snapshotLabel}`
+              : `Awaiting telemetry for ${formatCampusDate(reportingDate)}`}
           </span>
         </div>
 
@@ -199,13 +269,17 @@ export default function Energy({ onNavigate }) {
             <span className={styles.kpiValue} style={{ color: '#0F9D8A' }}>
               {loading ? (
                 <Skeleton width="80px" height="32px" />
+              ) : hasEnergyData && energySummary.solarOffsetPct !== null ? (
+                `${energySummary.solarOffsetPct}%`
               ) : (
-                `${energySummary?.solarOffsetPct ?? 4.8}%`
+                '—'
               )}
             </span>
           </div>
           <span className={styles.kpiSub}>
-            Synchronized load: {energySummary?.solarKw ?? 1.6} kW / {energySummary?.latestDemandKw ?? 33.4} kW
+            {hasEnergyData && energySummary.latestDemandKw
+              ? `Synchronized load: ${energySummary.solarKw ?? 0} kW / ${energySummary.latestDemandKw} kW`
+              : `No telemetry to correlate`}
           </span>
         </div>
       </section>
@@ -245,19 +319,31 @@ export default function Energy({ onNavigate }) {
                   </tr>
                 </thead>
                 <tbody>
-                  {dailyComparison.map((row) => (
-                    <tr key={row.date}>
-                      <td className={styles.dateCell}>{formatCampusDate(row.date, { includeYear: true }) || row.date}</td>
-                      <td>{row.consumptionKWh}</td>
-                      <td>{row.solarGeneratedKWh}</td>
-                      <td>{row.netGridImportKWh}</td>
-                      <td>
-                        <span className={styles.offsetPill}>
-                          {row.solarContributionPct}%
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
+                  {dailyComparison.map((row) => {
+                    const isSelected = row.date === reportingDate || row.isReportingDate;
+                    return (
+                      <tr
+                        key={row.date}
+                        className={isSelected ? styles.activeTableRow : ''}
+                        onClick={() => onSelectDate?.(row.date)}
+                        style={{ cursor: onSelectDate ? 'pointer' : 'default' }}
+                        title={onSelectDate ? `Click to view data for ${row.date}` : undefined}
+                      >
+                        <td className={styles.dateCell}>
+                          {formatCampusDate(row.date, { includeYear: true }) || row.date}
+                          {isSelected && <span className={styles.activeDateBadge}>Selected</span>}
+                        </td>
+                        <td>{row.consumptionKWh}</td>
+                        <td>{row.solarGeneratedKWh}</td>
+                        <td>{row.netGridImportKWh}</td>
+                        <td>
+                          <span className={styles.offsetPill}>
+                            {row.solarContributionPct}%
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
