@@ -81,6 +81,12 @@ export default function App() {
     if (params && params.type) {
       sessionStorage.setItem('unitwin_alerts_filter_type', params.type);
       window.location.hash = `${page}?type=${encodeURIComponent(params.type)}`;
+    } else if (params && params.buildingId) {
+      sessionStorage.setItem('unitwin_campus_selected_building', params.buildingId);
+      window.location.hash = `${page}?building=${encodeURIComponent(params.buildingId)}`;
+    } else if (params && params.search) {
+      sessionStorage.setItem('unitwin_global_search_term', params.search);
+      window.location.hash = `${page}?q=${encodeURIComponent(params.search)}`;
     } else {
       window.location.hash = page;
     }
@@ -99,7 +105,7 @@ export default function App() {
   }
 
   return (
-    <div className="app-shell">
+    <div className={`app-shell ${sidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
       <Sidebar
         activePage={activePage}
         onNavigate={handleNavigate}
@@ -108,14 +114,7 @@ export default function App() {
         alertCount={alertCount}
       />
 
-      <div
-        className="main-area"
-        style={{
-          marginLeft: sidebarCollapsed
-            ? 'var(--sidebar-w-col)'
-            : 'var(--sidebar-w)',
-        }}
-      >
+      <div className={`main-area ${sidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
         <Header
           activePage={activePage}
           onOpenCommandPalette={() => setCommandPaletteOpen(true)}

@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { getOccupancy, getBuildings, getRooms } from '../api/client';
 import { formatCampusDate, formatCampusTime } from '../utils/dateUtils';
+import { getRoomDisplayName, hasDesignatedLabName } from '../utils/roomUtils';
 import Skeleton from '../components/Skeleton';
 import styles from './Occupancy.module.css';
 
@@ -16,7 +17,45 @@ export default function Occupancy() {
   const [selectedBuilding, setSelectedBuilding] = useState('ALL');
   const [selectedFloor, setSelectedFloor] = useState('ALL');
   const [selectedUtilization, setSelectedUtilization] = useState('ALL');
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState(() => {
+    try {
+      const stored = sessionStorage.getItem('unitwin_global_search_term');
+      if (stored) {
+        sessionStorage.removeItem('unitwin_global_search_term');
+        return stored;
+      }
+      const hash = window.location.hash;
+      if (hash.includes('q=')) {
+        const match = hash.match(/q=([^&]+)/);
+        if (match) return decodeURIComponent(match[1]);
+      }
+    } catch {
+      // ignore
+    }
+    return '';
+  });
+
+  // Sync search query when hash or session changes
+  useEffect(() => {
+    const syncExternalSearch = () => {
+      try {
+        let term = sessionStorage.getItem('unitwin_global_search_term');
+        if (!term && window.location.hash.includes('q=')) {
+          const match = window.location.hash.match(/q=([^&]+)/);
+          if (match) term = decodeURIComponent(match[1]);
+        }
+        if (term) {
+          sessionStorage.removeItem('unitwin_global_search_term');
+          setSearchQuery(term);
+        }
+      } catch {
+        // ignore
+      }
+    };
+    syncExternalSearch();
+    window.addEventListener('hashchange', syncExternalSearch);
+    return () => window.removeEventListener('hashchange', syncExternalSearch);
+  }, []);
 
   useEffect(() => {
     let isMounted = true;
@@ -83,8 +122,10 @@ export default function Occupancy() {
         const q = searchQuery.toLowerCase();
         const roomNum = (item.roomNumber || '').toLowerCase();
         const type = (item.roomType || '').toLowerCase();
+        const matchedRoom = rooms.find((rm) => rm.roomNumber === item.roomNumber);
+        const name = (matchedRoom?.roomName || matchedRoom?.name || '').toLowerCase();
         const subj = Array.isArray(item.subjects) ? item.subjects.join(' ').toLowerCase() : '';
-        if (!roomNum.includes(q) && !type.includes(q) && !subj.includes(q)) return false;
+        if (!roomNum.includes(q) && !type.includes(q) && !name.includes(q) && !subj.includes(q)) return false;
       }
       return true;
     });
@@ -254,15 +295,27 @@ export default function Occupancy() {
                 {filteredRooms.map((r) => {
                   const util = r.utilization !== undefined ? r.utilization : Math.round(((r.occupancy || 0) / (r.capacity || 1)) * 100);
                   const utilColor = util >= 70 ? '#EF4444' : util >= 35 ? '#F59E0B' : '#10B981';
+                  const matchedRoom = rooms.find((rm) => rm.roomNumber === r.roomNumber) || r;
+                  const displayName = getRoomDisplayName(matchedRoom);
+                  const hasCustom = hasDesignatedLabName(matchedRoom);
 
                   return (
                     <tr key={r._id || r.roomNumber}>
                       <td className={styles.roomNumCol}>
-                        <span className={styles.roomBadge}>{r.roomNumber}</span>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                          <span className={styles.roomBadge}>{r.roomNumber}</span>
+                          {hasCustom && (
+                            <span style={{ fontSize: '11px', fontWeight: 600, color: '#0284c7' }}>
+                              {displayName}
+                            </span>
+                          )}
+                        </div>
                       </td>
                       <td className={styles.subtleCol}>{r.buildingId}</td>
                       <td>
-                        <span className={styles.typeTag}>{r.roomType || 'Space'}</span>
+                        <span className={styles.typeTag}>
+                          {hasCustom ? (matchedRoom.roomType || 'Laboratory') : (r.roomType || 'Space')}
+                        </span>
                       </td>
                       <td className={styles.valCol}>{r.occupancy ?? 0}</td>
                       <td className={styles.subtleCol}>{r.capacity ?? '—'}</td>

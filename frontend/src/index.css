@@ -1,5 +1,5 @@
 /* =========================================================
-   UNITWIN — Institutional Enterprise Campus Design System
+   AIT Campus Intelligence — Institutional Enterprise Campus Design System
    ========================================================= */
 
 :root {
@@ -36,7 +36,7 @@
   --navy:                 #0F2747;
   --navy-dark:            #0A1C33;
   --navy-light:           #1E3A60;
-  --sidebar-w:            240px;
+  --sidebar-w:            288px;
   --sidebar-w-col:        72px;
   --sidebar-bg:           #0F2747;
   --sidebar-border:       rgba(255, 255, 255, 0.08);
@@ -157,7 +157,8 @@ body {
 
 #root {
   width: 100%;
-  min-height: 100svh;
+  min-height: 100vh;
+  min-height: 100dvh;
   display: flex;
 }
 

@@ -121,7 +121,7 @@ export default function FloatingAiChat({ activePage = 'dashboard', onNavigate })
   const initialWelcomeMessage = {
     id: 'welcome-0',
     role: 'assistant',
-    text: `### Welcome to Unitwin Campus AI
+    text: `### Welcome to Campus AI
 I am grounded directly in live **MongoDB Atlas** telemetry and digital twin records for the campus.
 
 **Operational Reporting Date:** ${reportingDateLabel}
@@ -274,7 +274,7 @@ You can ask me about:
       const errorMessage = {
         id: `err-${Date.now()}`,
         role: 'assistant',
-        text: `⚠️ **Connection Error**: Could not connect to the campus AI backend (${err.message}). Please verify the backend API server is running on port 5001.`,
+        text: `⚠️ **Connection Error**: Could not connect to Campus AI backend (${err.message}). Please verify the backend API server is running on port 5001.`,
         sources: [],
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       };
@@ -352,10 +352,10 @@ You can ask me about:
             setIsOpen(true);
             setIsMinimized(false);
           }}
-          title="Open Unitwin Campus AI Assistant"
-          aria-label="Open Unitwin Campus AI Assistant"
+          title="Campus AI — Ask about your campus"
+          aria-label="Open Campus AI Assistant — Ask about your campus"
         >
-          <div className={styles.launcherIconWrap}>
+          <div className={styles.launcherIconWrap} aria-hidden="true">
             <svg
               className={styles.launcherIcon}
               viewBox="0 0 24 24"
@@ -365,12 +365,17 @@ You can ask me about:
               strokeLinecap="round"
               strokeLinejoin="round"
             >
-              <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z" />
+              <path d="M12 3l1.912 5.813a2 2 0 0 0 1.275 1.275L21 12l-5.813 1.912a2 2 0 0 0-1.275 1.275L12 21l-1.912-5.813a2 2 0 0 0-1.275-1.275L3 12l5.813-1.912a2 2 0 0 0 1.275-1.275L12 3z" />
+              <path d="M5 3v4" />
+              <path d="M19 17v4" />
+              <path d="M3 5h4" />
+              <path d="M17 19h4" />
             </svg>
-            <span className={styles.launcherStatusDot} />
           </div>
-          <span className={styles.launcherLabel}>Unitwin AI</span>
-          <span className={styles.launcherBadge}>Live</span>
+          <div className={styles.launcherText}>
+            <span className={styles.launcherTitle}>Campus AI</span>
+            <span className={styles.launcherSubtitle}>Ask about your campus</span>
+          </div>
         </button>
       )}
 
@@ -378,7 +383,7 @@ You can ask me about:
       {isOpen && (
         <aside
           className={`${styles.chatContainer} ${isMinimized ? styles.chatContainerMinimized : ''}`}
-          aria-label="Unitwin AI Assistant Dialog"
+          aria-label="Campus AI Assistant Dialog"
         >
           {/* Header */}
           <div className={styles.chatHeader}>
@@ -401,14 +406,14 @@ You can ask me about:
               </div>
               <div className={styles.headerTitles}>
                 <div className={styles.headerTitleRow}>
-                  <span className={styles.headerTitle}>Unitwin AI</span>
+                  <span className={styles.headerTitle}>Campus AI</span>
                   <span className={styles.aiIndicator}>
                     <span className={styles.aiIndicatorDot} />
                     {aiStatus?.geminiConfigured ? 'Gemini 2.5' : 'Atlas Grounded'}
                   </span>
                 </div>
                 <span className={styles.headerSubtitle}>
-                  Smart Campus Digital Twin Assistant
+                  Smart Campus Operations Assistant
                 </span>
               </div>
             </div>

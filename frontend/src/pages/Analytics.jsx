@@ -1129,10 +1129,10 @@ export default function Analytics({ onNavigate }) {
                       <option value="200kw">Scale: Reference (200 kW)</option>
                       <option value="connected">Scale: Connected ({connectedCapacityKw} kW)</option>
                     </select>
-                    <span className={styles.panelTag}>{latestEnergy.demandKw} kW Latest Demand</span>
+                    <span className={styles.panelTag}>{latestEnergy.demandKw} kW Active Power Demand</span>
                   </div>
                   <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-                    {latestEnergy.energyKWh} kWh interval ({latestEnergy.label})
+                    Interval Energy: {latestEnergy.energyKWh} kWh ({latestEnergy.label})
                   </span>
                 </div>
               </div>
@@ -1153,11 +1153,11 @@ export default function Analytics({ onNavigate }) {
                           {formattedDate} · {t.snapshotLabel}
                         </span>
                         <span className={styles.timelineVal}>
-                          {demandVal.toFixed(1)} kW demand{' '}
+                          {demandVal.toFixed(1)} kW Active Power Demand{' '}
                           <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 400 }}>
                             ({demandFill.toFixed(1)}% of scale)
                           </span>{' '}
-                          · {energyKWhVal.toFixed(1)} kWh interval
+                          · {energyKWhVal.toFixed(1)} kWh Interval Energy
                         </span>
                       </div>
                       <div className={styles.barTrack}>
@@ -1176,12 +1176,12 @@ export default function Analytics({ onNavigate }) {
               <div>
                 <h3 className={styles.panelTitle}>Solar Photovoltaic Generation &amp; Net Grid Balance</h3>
                 <p className={styles.panelSub}>
-                  MongoDB Atlas <code style={{ fontSize: '11px', color: 'var(--primary-blue)', fontFamily: 'var(--font-mono)' }}>solarGeneration</code> telemetry · Assumed {solarSummary?.systemCapacityKW || '4.0'} kWp Rooftop Array (BLD001 Main Building) diurnal simulation model correlated with campus electrical demand
+                  MongoDB Atlas <code style={{ fontSize: '11px', color: 'var(--primary-blue)', fontFamily: 'var(--font-mono)' }}>solarGeneration</code> telemetry · Assumed {solarSummary?.systemCapacityKW || '20.0'} kWp Rooftop Array (BLD001 Main Building) diurnal simulation model correlated with campus electrical demand
                 </p>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <span className={styles.panelTag} style={{ background: 'var(--secondary-teal-subtle)', color: 'var(--secondary-teal)', borderColor: 'var(--secondary-teal-border)' }}>
-                  {solarSummary?.totalSolarKWh || energySummary?.totalSolarGeneratedKWh || '105.0'} kWh Total Solar (Simulated)
+                  Solar Energy Generated: {solarSummary?.totalGeneratedKWh || energySummary?.totalSolarGeneratedKWh || '435.1'} kWh ({energySummary?.reportingPeriod || 'Baseline'})
                 </span>
                 {onNavigate && (
                   <button
@@ -1205,57 +1205,60 @@ export default function Analytics({ onNavigate }) {
             {/* Quick Solar KPIs */}
             <div className={styles.kpiRow} style={{ marginBottom: '16px' }}>
               <div className={styles.alertTypeChip} style={{ cursor: 'default' }}>
-                <span className={styles.chipName}>Cumulative Solar Yield</span>
+                <span className={styles.chipName}>Solar Energy Generated</span>
                 <span className={styles.chipCount} style={{ color: 'var(--secondary-teal)' }}>
-                  {solarSummary?.totalSolarKWh || energySummary?.totalSolarGeneratedKWh || '105.0'} <span style={{ fontSize: '13px', fontWeight: 500 }}>kWh</span>
+                  {solarSummary?.totalGeneratedKWh || energySummary?.totalSolarGeneratedKWh || '435.1'} <span style={{ fontSize: '13px', fontWeight: 500 }}>kWh</span>
                 </span>
                 <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-                  Oct 12 – 16, 2026 (5-day simulated baseline)
+                  {solarSummary?.reportingPeriod || energySummary?.reportingPeriod || 'Oct 12 – 17, 2026 (Simulated)'}
                 </span>
               </div>
 
               <div className={styles.alertTypeChip} style={{ cursor: 'default' }}>
                 <span className={styles.chipName}>Assumed PV Capacity</span>
                 <span className={styles.chipCount}>
-                  {solarSummary?.systemCapacityKW || '4.0'} <span style={{ fontSize: '13px', fontWeight: 500 }}>kWp</span>
+                  {solarSummary?.systemCapacityKW || '20.0'} <span style={{ fontSize: '13px', fontWeight: 500 }}>kWp</span>
                 </span>
                 <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-                  {solarSummary?.panelCount || 10} modules (assumed {solarSummary?.panelCapacityKW ? Math.round(solarSummary.panelCapacityKW * 1000) : 400}W each)
+                  {solarSummary?.panelCount || 50} modules (assumed {solarSummary?.panelCapacityKW ? Math.round(solarSummary.panelCapacityKW * 1000) : 400}W each)
                 </span>
               </div>
 
               <div className={styles.alertTypeChip} style={{ cursor: 'default' }}>
-                <span className={styles.chipName}>Peak Solar Output (Simulated)</span>
+                <span className={styles.chipName}>Current Solar Output</span>
                 <span className={styles.chipCount} style={{ color: '#2563EB' }}>
-                  {solarSummary?.peakEstimatedKW || solarSummary?.peakPowerKw || '3.34'} <span style={{ fontSize: '13px', fontWeight: 500 }}>kW</span>
+                  {typeof energySummary?.solarKw === 'number'
+                    ? energySummary.solarKw.toFixed(2)
+                    : (solarSummary?.latestSnapshot?.currentSolarPowerKW ?? '1.60')}{' '}
+                  <span style={{ fontSize: '13px', fontWeight: 500 }}>kW</span>
                 </span>
                 <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-                  83.5% peak capacity factor at midday
+                  Latest snapshot: {energySummary?.snapshotLabel || '05:00 PM IST'} [SIM]
                 </span>
               </div>
 
               <div className={styles.alertTypeChip} style={{ cursor: 'default' }}>
-                <span className={styles.chipName}>Campus Solar Offset</span>
+                <span className={styles.chipName}>Instantaneous Solar Offset</span>
                 <span className={styles.chipCount} style={{ color: 'var(--status-success)' }}>
-                  {energySummary?.overallSolarContributionPct || '2.86'}%
+                  {energySummary?.solarOffsetPct ?? '4.8'}%
                 </span>
                 <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-                  Of {energySummary?.totalCampusEnergyKWh ? Number(energySummary.totalCampusEnergyKWh).toLocaleString() : '3,668.7'} kWh campus load
+                  Of {energySummary?.latestDemandKw ?? '33.4'} kW active demand ({energySummary?.netImportKw ?? '31.8'} kW net import)
                 </span>
               </div>
             </div>
 
-            {/* 5-Day Daily Solar vs Campus Demand Table */}
+            {/* Daily Solar vs Campus Demand Table */}
             {energySummary?.dailyComparison && energySummary.dailyComparison.length > 0 && (
               <div className={styles.tableWrap} style={{ marginTop: '8px' }}>
                 <table className={styles.table}>
                   <thead>
                     <tr>
                       <th>Baseline Date</th>
-                      <th>Campus Energy Demand</th>
-                      <th>Rooftop Solar Output</th>
-                      <th>Net Grid Import</th>
-                      <th>Renewable Offset %</th>
+                      <th>Campus Consumption (kWh)</th>
+                      <th>Solar Generation (kWh)</th>
+                      <th>Net Grid Import (kWh)</th>
+                      <th>Daily Solar Offset</th>
                     </tr>
                   </thead>
                   <tbody>

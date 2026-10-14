@@ -7,7 +7,7 @@ const {
 } = require('./solarSimulationService');
 
 /**
- * Safe, read-only, controlled data retrieval functions for Unitwin Smart Campus digital twin.
+ * Safe, read-only, controlled data retrieval functions for AIT Campus Intelligence digital twin.
  * All functions strictly observe temporal boundaries:
  * - Current metrics never include records timestamped after the reporting cutoff.
  * - Historical and future requests are bounded to their respective windows.
@@ -149,13 +149,25 @@ async function getOccupancy(query = {}, dateContext = null) {
   const db = getDb();
   const cutoff = getEffectiveCutoff(query, dateContext);
 
-  // Find latest snapshot on or before cutoff (including Saturday Oct 17 scheduled sessions)
-  const latestSnapAgg = await db.collection('occupancy').aggregate([
+  // Find latest comprehensive snapshot on or before cutoff:
+  // Weekday daytime snapshots monitor >= 50 rooms; Saturday timetable sessions monitor 14 rooms (>= 10).
+  let latestSnapAgg = await db.collection('occupancy').aggregate([
     { $match: { timestamp: { $lte: cutoff } } },
     { $group: { _id: { timestamp: '$timestamp', label: '$snapshotLabel' }, count: { $sum: 1 } } },
+    { $match: { count: { $gte: 10 } } },
     { $sort: { '_id.timestamp': -1 } },
     { $limit: 1 },
   ]).toArray();
+
+  // If no snapshot with >= 10 rooms exists on or before cutoff, take the latest available snapshot
+  if (latestSnapAgg.length === 0) {
+    latestSnapAgg = await db.collection('occupancy').aggregate([
+      { $match: { timestamp: { $lte: cutoff } } },
+      { $group: { _id: { timestamp: '$timestamp', label: '$snapshotLabel' }, count: { $sum: 1 } } },
+      { $sort: { '_id.timestamp': -1 } },
+      { $limit: 1 },
+    ]).toArray();
+  }
 
   if (latestSnapAgg.length === 0) {
     return {
@@ -318,7 +330,7 @@ async function getEnergyAndSolar(query = {}, dateContext = null) {
     db.collection('solarGeneration')
       .find({ timestamp: { $lte: cutoff } })
       .sort({ timestamp: -1, panelNumber: 1 })
-      .limit(10)
+      .limit(50)
       .toArray(),
     db.collection('solarGeneration').aggregate([
       { $match: { timestamp: { $gte: targetDayStart, $lte: cutoff } } },
@@ -326,15 +338,20 @@ async function getEnergyAndSolar(query = {}, dateContext = null) {
     ]).toArray(),
     db.collection('solarGeneration').aggregate([
       { $match: { timestamp: { $lte: cutoff } } },
-      { $group: { _id: null, totalKWh: { $sum: '$energyGeneratedKWh' } } },
+      { $group: { _id: null, totalKWh: { $sum: '$energyGeneratedKWh' }, systemCapacityKW: { $max: '$systemCapacityKW' } } },
     ]).toArray(),
   ]);
 
   const simConfig = getSimulationConfig();
-  const latestSolarTotalKWh = solarLatestDocs.reduce((acc, p) => acc + (p.energyGeneratedKWh || 0), 0);
-  const latestSolarKW = calculatePowerFromIntervalEnergy(latestSolarTotalKWh, 2.5, simConfig);
-  const daySolarKWh = Number((solarDayAgg[0]?.totalKWh || 0).toFixed(2));
-  const cumulativeSolarKWh = Number((solarCumAgg[0]?.totalKWh || 0).toFixed(2));
+  const dbCapacity = solarCumAgg[0]?.systemCapacityKW || simConfig.assumedInstalledCapacityKW;
+  const capacityScale = (dbCapacity > simConfig.assumedInstalledCapacityKW && dbCapacity > 0)
+    ? (simConfig.assumedInstalledCapacityKW / dbCapacity)
+    : 1.0;
+
+  const latestSolarTotalKWh = solarLatestDocs.reduce((acc, p) => acc + (p.energyGeneratedKWh || 0), 0) * capacityScale;
+  const latestSolarKW = calculatePowerFromIntervalEnergy(latestSolarTotalKWh, 1.6667, simConfig);
+  const daySolarKWh = Number(((solarDayAgg[0]?.totalKWh || 0) * capacityScale).toFixed(2));
+  const cumulativeSolarKWh = Number(((solarCumAgg[0]?.totalKWh || 0) * capacityScale).toFixed(2));
 
   const { netImportKW, solarOffsetPct } = calculateNetGridBalance(activeDemandKw, latestSolarKW);
 
@@ -630,7 +647,7 @@ async function getExecutiveOverview(query = {}, dateContext = null) {
   return {
     domain: 'Executive Campus Overview',
     sourceCollection: 'Multi-Collection Synthesis',
-    provenance: `Unitwin Campus State (${formatDisplayDate(cutoff)})`,
+    provenance: `AIT Campus Intelligence State (${formatDisplayDate(cutoff)})`,
     actualCutoffApplied: cutoff.toISOString(),
     reportingPeriod: formatDisplayDate(cutoff),
     hasRecords: energyRes.hasRecords || occupancyRes.hasRecords,

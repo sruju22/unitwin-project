@@ -48,7 +48,7 @@ export const ROOMS = [
   { id: 'C104', floor: 1, type: SM,  label: 'C104 — Smart Room', capacity: 40,  col: 3, side: 'left',  w: 1.4, d: 1.4 },
   { id: 'C105', floor: 1, type: HOP, label: 'C105 — HOP Room',  capacity: 30,  col: 4, side: 'left',  w: 1.2, d: 1.4 },
   { id: 'C106', floor: 1, type: SR,  label: 'C106 — Staff Room', capacity: 10,  col: 0, side: 'right', w: 1.4, d: 1.4 },
-  { id: 'C107', floor: 1, type: LAB, label: 'C107 — CV Raman Lab', capacity: 30, col: 1, side: 'right', w: 2.4, d: 1.4 },
+  { id: 'C107', floor: 1, type: LAB, roomName: 'Sir CV Raman Lab', label: 'C107 — Sir CV Raman Lab', capacity: 30, col: 1, side: 'right', w: 2.4, d: 1.4 },
   { id: 'C108', floor: 1, type: GW,  label: 'C108',              capacity: null, col: 3, side: 'right', w: 1.0, d: 1.4 },
   { id: 'C109', floor: 1, type: BW,  label: 'C109',              capacity: null, col: 4, side: 'right', w: 1.0, d: 1.4 },
 
@@ -66,9 +66,9 @@ export const ROOMS = [
   { id: 'C302', floor: 3, type: C,   label: 'C302',              capacity: 70,  col: 1, side: 'left',  w: 1.8, d: 1.4 },
   { id: 'C303', floor: 3, type: C,   label: 'C303',              capacity: 70,  col: 2, side: 'left',  w: 1.8, d: 1.4 },
   { id: 'C304', floor: 3, type: C,   label: 'C304',              capacity: 70,  col: 3, side: 'left',  w: 1.8, d: 1.4 },
-  { id: 'C305', floor: 3, type: LAB, label: 'C305 — CAED Lab',   capacity: 30,  col: 0, side: 'right', w: 2.0, d: 1.4 },
+  { id: 'C305', floor: 3, type: LAB, roomName: 'CAED Lab', label: 'C305 — CAED Lab',   capacity: 30,  col: 0, side: 'right', w: 2.0, d: 1.4 },
   { id: 'C306', floor: 3, type: SR,  label: 'C306 — Staff Room', capacity: 10,  col: 2, side: 'right', w: 1.4, d: 1.4 },
-  { id: 'C307', floor: 3, type: LAB, label: 'C307 — Additional Lab', capacity: 30, col: 3, side: 'right', w: 2.0, d: 1.4 },
+  { id: 'C307', floor: 3, type: LAB, roomName: 'Virtual Instrument Lab', label: 'C307 — Virtual Instrument Lab', capacity: 30, col: 3, side: 'right', w: 2.0, d: 1.4 },
   { id: 'C308', floor: 3, type: GW,  label: 'C308',              capacity: null, col: 4, side: 'right', w: 1.0, d: 1.4 },
   { id: 'C309', floor: 3, type: BW,  label: 'C309',              capacity: null, col: 5, side: 'right', w: 1.0, d: 1.4 },
 ];
@@ -224,3 +224,23 @@ export function getBuildingSummary(time) {
     roomsWithData,
   };
 }
+
+export const CAMPUS_STATIC_ROOMS = [
+  ...ROOMS.map((r) => ({ ...r, block: r.block || 'C', buildingId: 'BLD001' })),
+  // Block A Laboratories
+  { id: 'A-110', roomNumber: 'A-110', floor: 1, floorNumber: 1, type: 'Physics Laboratory', roomType: 'Physics Laboratory', roomName: 'Physics Laboratory', label: 'A-110 — Physics Laboratory', capacity: 40, block: 'A', buildingId: 'BLD001' },
+  { id: 'A-112', roomNumber: 'A-112', floor: 1, floorNumber: 1, type: 'Physics Laboratory', roomType: 'Physics Laboratory', roomName: 'Physics Laboratory - II', label: 'A-112 — Physics Laboratory - II', capacity: 40, block: 'A', buildingId: 'BLD001' },
+  { id: 'A-118', roomNumber: 'A-118', floor: 1, floorNumber: 1, type: 'Chemistry Lab', roomType: 'Chemistry Lab', roomName: 'Chemistry Lab', label: 'A-118 — Chemistry Lab', capacity: 40, block: 'A', buildingId: 'BLD001' },
+  { id: 'A-119', roomNumber: 'A-119', floor: 1, floorNumber: 1, type: 'Chemistry Lab', roomType: 'Chemistry Lab', roomName: 'Chemistry Lab', label: 'A-119 — Chemistry Lab', capacity: 40, block: 'A', buildingId: 'BLD001' },
+  { id: 'A-210', roomNumber: 'A-210', floor: 2, floorNumber: 2, type: 'CAD Lab', roomType: 'CAD Lab', roomName: 'CAD Lab', label: 'A-210 — CAD Lab', capacity: 40, block: 'A', buildingId: 'BLD001' },
+  { id: 'A-311', roomNumber: 'A-311', floor: 3, floorNumber: 3, type: 'PG Lab', roomType: 'PG Lab', roomName: 'PG Lab', label: 'A-311 — PG Lab', capacity: 35, block: 'A', buildingId: 'BLD001' },
+  { id: 'A-312', roomNumber: 'A-312', floor: 3, floorNumber: 3, type: 'Mathematics Lab', roomType: 'Mathematics Lab', roomName: 'Mathematics Lab', label: 'A-312 — Mathematics Lab', capacity: 35, block: 'A', buildingId: 'BLD001' },
+  { id: 'A-314', roomNumber: 'A-314', floor: 3, floorNumber: 3, type: 'Career Development Multi Skilling Lab', roomType: 'Career Development Multi Skilling Lab', roomName: 'Career Development Multi Skilling Lab', label: 'A-314 — Career Development Multi Skilling Lab', capacity: 50, block: 'A', buildingId: 'BLD001' },
+  { id: 'A-320', roomNumber: 'A-320', floor: 3, floorNumber: 3, type: 'Computer Lab', roomType: 'Computer Lab', roomName: 'Computer Lab', label: 'A-320 — Computer Lab', capacity: 40, block: 'A', buildingId: 'BLD001' },
+  // Block B Laboratories
+  { id: 'B-301', roomNumber: 'B-301', floor: 3, floorNumber: 3, type: 'Laboratory', roomType: 'Laboratory', roomName: 'Team Neptunex', label: 'B-301 — Team Neptunex', capacity: 30, block: 'B', buildingId: 'BLD001' },
+  { id: 'B-302', roomNumber: 'B-302', floor: 3, floorNumber: 3, type: 'Laboratory', roomType: 'Laboratory', roomName: 'Siddartha Lab', label: 'B-302 — Siddartha Lab', capacity: 40, block: 'B', buildingId: 'BLD001' },
+  { id: 'B-304', roomNumber: 'B-304', floor: 3, floorNumber: 3, type: 'Computer Lab', roomType: 'Computer Lab', roomName: 'Computer Lab', label: 'B-304 — Computer Lab', capacity: 40, block: 'B', buildingId: 'BLD001' },
+  { id: 'B-305', roomNumber: 'B-305', floor: 3, floorNumber: 3, type: 'Computer Lab', roomType: 'Computer Lab', roomName: 'Computer Lab Back Entrance', label: 'B-305 — Computer Lab Back Entrance', capacity: 30, block: 'B', buildingId: 'BLD001' },
+];
+

@@ -1,9 +1,9 @@
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import CampusMap from '../components/Campus2D/CampusMap';
 import BuildingDetailsDrawer from '../components/CampusUI/BuildingDetailsDrawer';
 import RoomInfoPanel from '../components/CampusUI/RoomInfoPanel';
 import CampusAnalyticsModal from '../components/CampusUI/CampusAnalyticsModal';
-import { getCampusLogicalAnalytics } from '../data/buildingRegistry';
+import { getCampusLogicalAnalytics, getLogicalBuildings, formatBuildingCode } from '../data/buildingRegistry';
 import styles from './Campus.module.css';
 
 export default function Campus() {
@@ -12,6 +12,8 @@ export default function Campus() {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [hoveredBuilding, setHoveredBuilding] = useState(null);
   const [inspectingBuildingId, setInspectingBuildingId] = useState(null);
+  const [inspectingRoomNumber, setInspectingRoomNumber] = useState(null);
+  const [inspectingBlock, setInspectingBlock] = useState(null);
   const [statusFilter, setStatusFilter] = useState('all');
   const [isAnalyticsModalOpen, setIsAnalyticsModalOpen] = useState(false);
   const [analytics, setAnalytics] = useState(() => getCampusLogicalAnalytics());
@@ -85,6 +87,49 @@ export default function Campus() {
     }
     setAnalytics(getCampusLogicalAnalytics());
   }, [hoveredBuilding]);
+
+  // Deep-link building selection from Command Palette or URL hash
+  useEffect(() => {
+    const BLD_TO_CODE = {
+      BLD001: 'B02',
+      BLD002: 'B10',
+      BLD003: 'B06',
+      BLD004: 'B04',
+      BLD005: 'B17',
+      BLD006: 'B18',
+      BLD007: 'B07',
+      BLD008: 'B19',
+      BLD009: 'B20',
+      BLD010: 'B08',
+    };
+
+    const syncBuildingFromExternal = () => {
+      try {
+        let bId = sessionStorage.getItem('unitwin_campus_selected_building');
+        if (!bId && window.location.hash.includes('building=')) {
+          const match = window.location.hash.match(/building=([^&]+)/);
+          if (match) bId = decodeURIComponent(match[1]);
+        }
+        if (bId) {
+          sessionStorage.removeItem('unitwin_campus_selected_building');
+          const all = getLogicalBuildings();
+          const mapped = BLD_TO_CODE[bId] || bId;
+          const targetCode = formatBuildingCode(mapped);
+          const found = all.find((b) => b.id === targetCode || b.id === mapped || b.id === bId);
+          if (found) {
+            setSelectedBuilding(found);
+            setIsDrawerOpen(true);
+          }
+        }
+      } catch (err) {
+        // ignore
+      }
+    };
+
+    syncBuildingFromExternal();
+    window.addEventListener('hashchange', syncBuildingFromExternal);
+    return () => window.removeEventListener('hashchange', syncBuildingFromExternal);
+  }, []);
 
   const activeDisplayBuilding = isDrawerOpen ? selectedBuilding : null;
   const isHoverPreview = false;
@@ -227,11 +272,15 @@ export default function Campus() {
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                   <span style={{ color: '#f8fafc', fontWeight: 700, fontSize: '0.95rem' }}>
-                    Academic Building 1 (C Block) — Room &amp; Timetable Digital Twin
+                    Academic Building 1 (Block {inspectingBlock || (inspectingRoomNumber ? inspectingRoomNumber.charAt(0).toUpperCase() : 'C')}) — Room &amp; Timetable Digital Twin
                   </span>
                 </div>
                 <button
-                  onClick={() => setInspectingBuildingId(null)}
+                  onClick={() => {
+                    setInspectingBuildingId(null);
+                    setInspectingRoomNumber(null);
+                    setInspectingBlock(null);
+                  }}
                   style={{
                     background: 'rgba(255, 255, 255, 0.1)',
                     border: 'none',
@@ -249,7 +298,14 @@ export default function Campus() {
               <div style={{ flex: 1, position: 'relative', overflow: 'hidden' }}>
                 <RoomInfoPanel
                   buildingId={inspectingBuildingId}
-                  onClose={() => setInspectingBuildingId(null)}
+                  block={inspectingBlock}
+                  selectedRoomNumber={inspectingRoomNumber}
+                  onSelectRoom={(rNum) => setInspectingRoomNumber(rNum)}
+                  onClose={() => {
+                    setInspectingBuildingId(null);
+                    setInspectingRoomNumber(null);
+                    setInspectingBlock(null);
+                  }}
                 />
               </div>
             </div>
@@ -281,7 +337,11 @@ export default function Campus() {
               onClose={handleCloseDrawer}
               onFocusOnMap={(b) => mapRef.current?.focusBuilding(b)}
               onBuildingUpdated={handleBuildingUpdated}
-              onOpenRoomInspector={(bldId) => setInspectingBuildingId(bldId)}
+              onOpenRoomInspector={(bldId, rNum, blk) => {
+                setInspectingBuildingId(bldId);
+                setInspectingRoomNumber(rNum || null);
+                setInspectingBlock(blk || (rNum ? rNum.charAt(0).toUpperCase() : null));
+              }}
               onMouseEnter={handleDrawerMouseEnter}
               onMouseLeave={handleDrawerMouseLeave}
             />

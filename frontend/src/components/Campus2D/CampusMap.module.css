@@ -70,7 +70,7 @@
 
 /* Institutional blue / cyan hover effects */
 .interactivePolygon:hover {
-  fill: var(--primary-blue-subtle, rgba(0, 229, 255, 0.15)); /* Unitwin institutional blue / cyan highlight */
+  fill: var(--primary-blue-subtle, rgba(0, 229, 255, 0.15)); /* AIT institutional blue / cyan highlight */
   stroke: var(--primary-blue, rgba(0, 229, 255, 0.8));
 }
 

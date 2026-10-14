@@ -1,5 +1,5 @@
 /**
- * Unitwin Date Context & Reference Time Service
+ * AIT Campus Intelligence - Date Context & Reference Time Service
  *
  * Enforces one consistent temporal policy across Dashboard metrics and AI chatbot queries:
  * 1. Establishes the reporting reference time (from client asOfDate or system current time).

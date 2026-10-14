@@ -58,8 +58,11 @@ router.get('/', async (req, res, next) => {
     let summary = null;
     let latestSlice = null;
     if (timelineAgg.length > 0) {
-      // Select the latest snapshot matching the filter boundaries (including Saturday Oct 17)
-      const targetSnapshot = timelineAgg[timelineAgg.length - 1];
+      // Prefer comprehensive daytime snapshot (roomCount >= 10) within the filtered timeframe (accommodates Sat Oct 17 with 14 rooms and weekdays with 94 rooms)
+      const comprehensiveSnapshots = timelineAgg.filter((t) => t.roomCount >= 10);
+      const targetSnapshot = comprehensiveSnapshots.length > 0
+        ? comprehensiveSnapshots[comprehensiveSnapshots.length - 1]
+        : timelineAgg[timelineAgg.length - 1];
       const latestTime = targetSnapshot._id.timestamp;
       latestSlice = await db
         .collection('occupancy')

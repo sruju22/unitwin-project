@@ -239,7 +239,7 @@ export default function Congestion() {
             Traffic Observations ({filteredRecords.length} record{filteredRecords.length === 1 ? '' : 's'})
           </h3>
           <span className={styles.snapshotTag}>
-            Latest: {congestionSummary?.latestSnapshot || '01:45 PM IST'}
+            Latest: {congestionSummary?.latestSnapshot || '05:00 PM IST'}
           </span>
         </div>
 

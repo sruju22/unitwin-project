@@ -1,5 +1,5 @@
 /**
- * Unitwin Smart Campus - Solar Photovoltaic Simulation & Analytics Service
+ * AIT Campus Intelligence - Solar Photovoltaic Simulation & Analytics Service
  * 
  * Provides a physically grounded, configurable solar diurnal simulation model
  * for demonstration when physical campus solar panel technical specifications
@@ -14,7 +14,7 @@
  * 6. Explicit simulation disclosure and provenance metadata.
  */
 
-const DEFAULT_PANEL_COUNT = 10;
+const DEFAULT_PANEL_COUNT = 50;
 const DEFAULT_PANEL_RATING_WATTS = 400; // 400W per monocrystalline module
 const DEFAULT_SYSTEM_LOSS_FACTOR = 0.14; // 14% system losses (inverter, wiring, temperature, soiling)
 const DEFAULT_CAMPUS_TIMEZONE = 'Asia/Kolkata'; // Standard Indian Campus Timezone (UTC+5:30)
@@ -274,22 +274,29 @@ function integrateEnergyKWh(readings) {
 
 /**
  * Calculate net grid import and solar offset safely.
- * Net Import = max(0, Demand - Solar)
- * Solar Offset = Demand > 0 ? min(100, (Solar / Demand) * 100) : 0
+ * Net Import (kW) = max(0, Demand - Solar)
+ * Grid Export (kW) = max(0, Solar - Demand)
+ * Solar Offset (%) = Demand > 0 ? (Solar / Demand) * 100 : 0
  */
 function calculateNetGridBalance(demandKW, solarPowerKW) {
   const safeDemand = Math.max(0, Number(demandKW) || 0);
   const safeSolar = Math.max(0, Number(solarPowerKW) || 0);
   const netImportKW = Number(Math.max(0, safeDemand - safeSolar).toFixed(1));
+  const gridExportKW = Number(Math.max(0, safeSolar - safeDemand).toFixed(1));
   const solarOffsetPct = safeDemand > 0
     ? Number(Math.min(100, (safeSolar / safeDemand) * 100).toFixed(1))
     : 0;
+  const rawSolarOffsetPct = safeDemand > 0
+    ? Number(((safeSolar / safeDemand) * 100).toFixed(1))
+    : (safeSolar > 0 ? 100 : 0);
 
   return {
     demandKW: Number(safeDemand.toFixed(1)),
     solarPowerKW: Number(safeSolar.toFixed(2)),
     netImportKW,
+    gridExportKW,
     solarOffsetPct,
+    rawSolarOffsetPct,
   };
 }
 

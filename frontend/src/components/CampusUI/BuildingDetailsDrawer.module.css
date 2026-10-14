@@ -651,3 +651,109 @@
   color: #cbd5e1;
   font-family: monospace;
 }
+
+/* Academic Laboratories & Facility Cards */
+.labCountBadge {
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: #38bdf8;
+  background: rgba(56, 189, 248, 0.12);
+  border: 1px solid rgba(56, 189, 248, 0.28);
+  padding: 0.2rem 0.55rem;
+  border-radius: 99px;
+  letter-spacing: 0.03em;
+}
+
+.labListGrid {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  max-height: 260px;
+  overflow-y: auto;
+  padding-right: 0.25rem;
+}
+
+.labCardBtn {
+  background: rgba(15, 23, 42, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  padding: 0.55rem 0.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.65rem;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  text-align: left;
+  width: 100%;
+}
+
+.labCardBtn:hover {
+  background: rgba(30, 41, 59, 0.85);
+  border-color: rgba(56, 189, 248, 0.4);
+  transform: translateY(-1px);
+}
+
+.labCardLeft {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  min-width: 0;
+  flex: 1;
+}
+
+.labRoomBadge {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #38bdf8;
+  background: rgba(56, 189, 248, 0.12);
+  border: 1px solid rgba(56, 189, 248, 0.25);
+  padding: 0.2rem 0.45rem;
+  border-radius: 5px;
+  flex-shrink: 0;
+  font-family: monospace;
+}
+
+.labCardInfo {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1;
+}
+
+.labCardName {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #f1f5f9;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.labCardMeta {
+  font-size: 0.68rem;
+  color: #94a3b8;
+  margin-top: 0.1rem;
+}
+
+.labActionHint {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: #38bdf8;
+  opacity: 0.85;
+  flex-shrink: 0;
+  transition: opacity 0.15s;
+}
+
+.labCardBtn:hover .labActionHint {
+  opacity: 1;
+}
+
+.labsLoadingBox {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.75rem;
+  color: #94a3b8;
+  padding: 0.75rem 0;
+}

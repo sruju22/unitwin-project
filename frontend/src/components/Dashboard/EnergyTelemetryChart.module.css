@@ -202,6 +202,30 @@
   color: var(--text-secondary);
 }
 
+.simBadge {
+  font-size: 8px;
+  font-weight: 700;
+  color: #0F9D8A;
+  background: rgba(15, 157, 138, 0.08);
+  border: 1px solid rgba(15, 157, 138, 0.25);
+  padding: 0.5px 3.5px;
+  border-radius: 3px;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  margin-left: 3px;
+  vertical-align: middle;
+}
+
+.pointCallout {
+  font-family: var(--font-sans);
+  pointer-events: none;
+  paint-order: stroke fill;
+  stroke: #FFFFFF;
+  stroke-width: 2.5px;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
 /* SVG Chart Wrap & Interactive Container */
 .chartWrap {
   display: flex;

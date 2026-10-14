@@ -132,7 +132,7 @@ export async function getSolarSummary() {
 }
 
 /**
- * Send inquiry to Unitwin AI Floating Assistant
+ * Send inquiry to Campus AI Floating Assistant
  * @param {{ message: string, history?: Array<{ role: string, text: string }>, pageContext?: string }} payload
  */
 export async function sendChatMessage(payload) {
@@ -145,6 +145,15 @@ export async function sendChatMessage(payload) {
  */
 export async function getAiStatus() {
   const response = await apiClient.get('/api/ai/status');
+  return response.data;
+}
+
+/**
+ * Unified campus-aware search
+ * @param {{ q: string, types?: string, limit?: number, asOfDate?: string }} params
+ */
+export async function searchCampus(params = {}) {
+  const response = await apiClient.get('/api/search', { params });
   return response.data;
 }
 

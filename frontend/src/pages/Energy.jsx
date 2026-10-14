@@ -74,7 +74,7 @@ export default function Energy({ onNavigate }) {
           <div className={styles.titleRow}>
             <h1 className={styles.title}>Campus Energy &amp; Solar PV Performance</h1>
             <span className={styles.datasetTag}>
-              MongoDB Atlas · 14,970 Energy &amp; 250 Solar Records
+              MongoDB Atlas · {energySummary?.totalRecordsCount?.toLocaleString() || '43,344'} Energy &amp; {solarData?.count || solarSummary?.totalRecordsCount || 2100} Solar Records
             </span>
           </div>
           <p className={styles.subtitle}>
@@ -98,7 +98,7 @@ export default function Energy({ onNavigate }) {
         </div>
       </section>
 
-      {/* KPI Overview Grid */}
+      {/* KPI Overview Grid - 6 Technically Rigorous Power & Energy Metrics */}
       <section className={styles.kpiGrid}>
         {/* Card 1: Total Campus Consumption */}
         <div className={styles.kpiCard}>
@@ -113,24 +113,26 @@ export default function Energy({ onNavigate }) {
             </span>
             <span className={styles.kpiUnit}>kWh</span>
           </div>
-          <span className={styles.kpiSub}>5-day monitoring week · Oct 12–16, 2026</span>
+          <span className={styles.kpiSub}>
+            {energySummary?.reportingPeriod || 'Oct 12–17, 2026 (Baseline)'}
+          </span>
         </div>
 
-        {/* Card 2: Rooftop Solar Generation */}
+        {/* Card 2: Solar Energy Generated */}
         <div className={styles.kpiCard}>
-          <span className={styles.kpiLabel}>Estimated Solar Generation</span>
+          <span className={styles.kpiLabel}>Solar Energy Generated</span>
           <div className={styles.kpiValueRow}>
             <span className={styles.kpiValue}>
               {loading ? (
                 <Skeleton width="80px" height="32px" />
               ) : (
-                (solarSummary?.totalGeneratedKWh || 105.0).toLocaleString()
+                (solarSummary?.totalGeneratedKWh || energySummary?.totalSolarGeneratedKWh || 435.1).toLocaleString()
               )}
             </span>
             <span className={styles.kpiUnit}>kWh</span>
           </div>
           <span className={styles.kpiSub}>
-            SOLAR001 · Assumed {solarSummary?.systemCapacityKW || 4.0} kWp Capacity ({solarSummary?.panelCount || 10} panels)
+            {solarSummary?.reportingPeriod || energySummary?.reportingPeriod || 'Oct 12–17, 2026 (Simulated)'}
           </span>
         </div>
 
@@ -142,17 +144,37 @@ export default function Energy({ onNavigate }) {
               {loading ? (
                 <Skeleton width="80px" height="32px" />
               ) : (
-                energySummary?.latestDemandKw || 122.9
+                energySummary?.latestDemandKw ?? 33.4
               )}
             </span>
             <span className={styles.kpiUnit}>kW</span>
           </div>
           <span className={styles.kpiSub}>
-            Latest snapshot: {energySummary?.snapshotLabel || '01:45 PM IST'}
+            Latest snapshot: {energySummary?.snapshotLabel || '05:00 PM IST'}
           </span>
         </div>
 
-        {/* Card 4: Net Grid Import & Solar Offset */}
+        {/* Card 4: Current Solar Output */}
+        <div className={styles.kpiCard}>
+          <span className={styles.kpiLabel}>Current Solar Output</span>
+          <div className={styles.kpiValueRow}>
+            <span className={styles.kpiValue} style={{ color: '#0F9D8A' }}>
+              {loading ? (
+                <Skeleton width="80px" height="32px" />
+              ) : (
+                typeof energySummary?.solarKw === 'number'
+                  ? energySummary.solarKw.toFixed(2)
+                  : (solarSummary?.latestSnapshot?.currentSolarPowerKW ?? 1.6)
+              )}
+            </span>
+            <span className={styles.kpiUnit}>kW</span>
+          </div>
+          <span className={styles.kpiSub}>
+            Latest snapshot: {energySummary?.snapshotLabel || '05:00 PM IST'} [SIM]
+          </span>
+        </div>
+
+        {/* Card 5: Net Grid Import */}
         <div className={styles.kpiCard}>
           <span className={styles.kpiLabel}>Net Grid Import</span>
           <div className={styles.kpiValueRow}>
@@ -160,13 +182,30 @@ export default function Energy({ onNavigate }) {
               {loading ? (
                 <Skeleton width="80px" height="32px" />
               ) : (
-                energySummary?.netImportKw || 120.4
+                energySummary?.netImportKw ?? 31.8
               )}
             </span>
             <span className={styles.kpiUnit}>kW</span>
           </div>
           <span className={styles.kpiSub}>
-            Solar offset: {energySummary?.solarOffsetPct || 2.86}% of active load
+            Latest snapshot: {energySummary?.snapshotLabel || '05:00 PM IST'}
+          </span>
+        </div>
+
+        {/* Card 6: Solar Offset */}
+        <div className={styles.kpiCard}>
+          <span className={styles.kpiLabel}>Solar Offset</span>
+          <div className={styles.kpiValueRow}>
+            <span className={styles.kpiValue} style={{ color: '#0F9D8A' }}>
+              {loading ? (
+                <Skeleton width="80px" height="32px" />
+              ) : (
+                `${energySummary?.solarOffsetPct ?? 4.8}%`
+              )}
+            </span>
+          </div>
+          <span className={styles.kpiSub}>
+            Synchronized load: {energySummary?.solarKw ?? 1.6} kW / {energySummary?.latestDemandKw ?? 33.4} kW
           </span>
         </div>
       </section>
@@ -179,10 +218,10 @@ export default function Energy({ onNavigate }) {
             <div>
               <h3 className={styles.panelTitle}>Daily Energy Consumption vs. Solar Generation</h3>
               <p className={styles.panelSubtitle}>
-                Measured energy consumption (kWh) against on-site solar yield over the 5-day monitoring week
+                Measured energy consumption (kWh) against on-site solar yield over the {dailyComparison.length || 6}-day monitoring baseline
               </p>
             </div>
-            <span className={styles.panelBadge}>5 Days Logged</span>
+            <span className={styles.panelBadge}>{dailyComparison.length || 6} Days Logged</span>
           </div>
 
           {loading ? (
@@ -200,9 +239,9 @@ export default function Energy({ onNavigate }) {
                   <tr>
                     <th>Date</th>
                     <th>Consumption (kWh)</th>
-                    <th>Solar Yield (kWh)</th>
-                    <th>Net Import (kWh)</th>
-                    <th>Solar Offset</th>
+                    <th>Solar Generation (kWh)</th>
+                    <th>Net Grid Import (kWh)</th>
+                    <th>Daily Solar Offset</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -233,37 +272,49 @@ export default function Energy({ onNavigate }) {
             <div>
               <h3 className={styles.panelTitle}>Rooftop Solar PV Array (SOLAR001)</h3>
               <p className={styles.panelSubtitle}>
-                Main Building rooftop array · 10 simulated panels (assumed {solarSummary?.systemCapacityKW || 4.0} kWp total capacity)
+                Main Building rooftop array · {solarSummary?.panelCount || panels.length || 50} simulated panels (assumed {solarSummary?.systemCapacityKW || 20.0} kWp total capacity)
               </p>
             </div>
-            <span className={styles.panelBadge}>10 / 10 Modelled</span>
+            <span className={styles.panelBadge}>{panels.length || solarSummary?.panelCount || 50} / {solarSummary?.panelCount || 50} Modelled</span>
           </div>
 
           {loading ? (
             <div className={styles.panelsGrid}>
-              {Array.from({ length: 10 }).map((_, i) => (
+              {Array.from({ length: 12 }).map((_, i) => (
                 <Skeleton key={i} width="100%" height="80px" />
               ))}
             </div>
           ) : panels.length > 0 ? (
             <div className={styles.panelsGrid}>
-              {panels.map((p) => (
-                <div key={p.panelId} className={styles.panelCard}>
-                  <div className={styles.panelCardHeader}>
-                    <span className={styles.panelId}>{p.panelId}</span>
-                    <span className={styles.panelDot} title="Online" />
+              {panels.map((p) => {
+                const currentPower = typeof p.currentPowerKW === 'number'
+                  ? p.currentPowerKW.toFixed(2)
+                  : ((p.totalGeneratedKWh / (solarSummary?.totalGeneratedKWh || 435.0)) * (energySummary?.solarKw || 12.0)).toFixed(2);
+                return (
+                  <div key={p.panelId} className={styles.panelCard}>
+                    <div className={styles.panelCardHeader}>
+                      <span className={styles.panelId}>{p.panelId}</span>
+                      <span className={styles.panelDot} title={p.status || 'Online'} />
+                    </div>
+                    <div className={styles.panelMetricRow}>
+                      <span className={styles.panelPowerVal}>{currentPower} kW</span>
+                      <span className={styles.panelPowerLabel}>Current Power</span>
+                    </div>
+                    <div className={styles.panelEnergyRow}>
+                      <span className={styles.panelEnergyVal}>{p.totalGeneratedKWh} kWh</span>
+                      <span className={styles.panelEnergyLabel}>Total Energy</span>
+                    </div>
+                    <span className={styles.panelCapacity}>Assumed {p.capacityKW || 0.4} kWp</span>
                   </div>
-                  <span className={styles.panelOutput}>{p.totalGeneratedKWh} kWh</span>
-                  <span className={styles.panelCapacity}>Assumed {p.capacityKW || 0.4} kWp</span>
-                </div>
-              ))}
+                );
+              })}
             </div>
           ) : (
             <p className={styles.panelSubtitle}>No panel records found.</p>
           )}
 
           <div style={{ marginTop: 'auto', paddingTop: '10px', borderTop: '1px solid var(--border)', fontSize: '11px', color: 'var(--text-secondary)', lineHeight: '1.45' }}>
-            <strong>Simulation Model Notice:</strong> Actual campus solar panel ratings and technical specifications are unverified. Telemetry uses a configurable diurnal simulation model assuming {solarSummary?.systemCapacityKW || 4.0} kWp installed capacity ({solarSummary?.panelCapacityKW ? Math.round(solarSummary.panelCapacityKW * 1000) : 400}W/module).
+            <strong>Simulation Model Notice:</strong> Actual campus solar panel ratings and technical specifications are unverified. Telemetry uses a configurable diurnal simulation model assuming {solarSummary?.systemCapacityKW || 20.0} kWp installed capacity ({solarSummary?.panelCapacityKW ? Math.round(solarSummary.panelCapacityKW * 1000) : 400}W/module).
           </div>
         </div>
       </section>
@@ -276,7 +327,7 @@ export default function Energy({ onNavigate }) {
             <div>
               <h3 className={styles.panelTitle}>Appliance Electrical Load Distribution</h3>
               <p className={styles.panelSubtitle}>
-                Active power consumption across campus appliance categories from 14,970 telemetry records
+                Active power consumption across campus appliance categories from {energySummary?.totalRecordsCount?.toLocaleString() || '43,344'} telemetry records
               </p>
             </div>
             <span className={styles.panelBadge}>{appliances.length} Categories</span>
@@ -311,7 +362,7 @@ export default function Energy({ onNavigate }) {
                 ))}
               </div>
               <div className={styles.alarmListFooter}>
-                <span>Appliance inventory aggregated across 14,970 baseline readings</span>
+                <span>Appliance inventory aggregated across {energySummary?.totalRecordsCount?.toLocaleString() || '43,344'} baseline readings</span>
                 <span style={{ color: 'var(--text-muted)' }}>371.4 kW connected load</span>
               </div>
             </>

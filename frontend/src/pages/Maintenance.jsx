@@ -14,7 +14,45 @@ export default function Maintenance() {
   const [selectedPriority, setSelectedPriority] = useState('ALL');
   const [selectedAssetType, setSelectedAssetType] = useState('ALL');
   const [selectedBuilding, setSelectedBuilding] = useState('ALL');
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState(() => {
+    try {
+      const stored = sessionStorage.getItem('unitwin_global_search_term');
+      if (stored) {
+        sessionStorage.removeItem('unitwin_global_search_term');
+        return stored;
+      }
+      const hash = window.location.hash;
+      if (hash.includes('q=')) {
+        const match = hash.match(/q=([^&]+)/);
+        if (match) return decodeURIComponent(match[1]);
+      }
+    } catch {
+      // ignore
+    }
+    return '';
+  });
+
+  // Sync search query when hash or session changes
+  useEffect(() => {
+    const syncExternalSearch = () => {
+      try {
+        let term = sessionStorage.getItem('unitwin_global_search_term');
+        if (!term && window.location.hash.includes('q=')) {
+          const match = window.location.hash.match(/q=([^&]+)/);
+          if (match) term = decodeURIComponent(match[1]);
+        }
+        if (term) {
+          sessionStorage.removeItem('unitwin_global_search_term');
+          setSearchQuery(term);
+        }
+      } catch {
+        // ignore
+      }
+    };
+    syncExternalSearch();
+    window.addEventListener('hashchange', syncExternalSearch);
+    return () => window.removeEventListener('hashchange', syncExternalSearch);
+  }, []);
 
   // Local interactive status overrides (session state)
   const [statusOverrides, setStatusOverrides] = useState({});

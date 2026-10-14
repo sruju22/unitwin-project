@@ -10,7 +10,7 @@ router.get('/status', (req, res) => {
   const hasKey = Boolean(process.env.GEMINI_API_KEY && process.env.GEMINI_API_KEY.trim() !== '' && process.env.GEMINI_API_KEY !== 'YOUR_GEMINI_API_KEY_HERE');
   res.json({
     success: true,
-    service: 'Unitwin AI Operations Assistant',
+    service: 'Campus AI Operations Assistant',
     geminiConfigured: hasKey,
     model: process.env.GEMINI_MODEL || 'gemini-3.8-flash',
     groundingEngine: 'MongoDB Atlas Live Telemetry Collections',
@@ -71,7 +71,7 @@ router.post('/chat', async (req, res, next) => {
     console.error('Error processing AI chat request:', err);
     return res.status(500).json({
       success: false,
-      error: 'An internal error occurred while processing the campus AI query.',
+      error: 'An internal error occurred while processing the Campus AI query.',
       details: err.message,
     });
   }

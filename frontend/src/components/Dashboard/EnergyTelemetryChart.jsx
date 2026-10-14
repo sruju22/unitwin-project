@@ -21,8 +21,23 @@ function getPolylinePath(pts) {
     .join(' ');
 }
 
+/**
+ * Extracts a concise clock time (e.g. "07:00 AM" or "5:00 PM") from timestamp or label,
+ * ensuring clean, non-colliding axis labels.
+ */
+function extractCleanTime(timestamp, label) {
+  if (timestamp) {
+    const d = parseCampusDate(timestamp);
+    if (d) return formatCampusTime(d, { includeZone: false });
+  }
+  if (!label) return '';
+  const m = label.match(/(\d{1,2}:\d{2}\s*(?:AM|PM|am|pm))/i);
+  if (m) return m[1].toUpperCase();
+  return label.replace(/\s*IST/i, '').trim();
+}
+
 export default function EnergyTelemetryChart() {
-  const [activeRange, setActiveRange] = useState('today'); // 'today' | '24h' | '7d'
+  const [activeRange, setActiveRange] = useState('7d'); // 'today' | '24h' | '7d'
   const [scaleMode, setScaleMode] = useState('dual'); // 'dual' (default) | 'shared'
   const [rawTimeline, setRawTimeline] = useState([]);
   const [hoverIndex, setHoverIndex] = useState(null);
@@ -45,16 +60,13 @@ export default function EnergyTelemetryChart() {
     return () => observer.disconnect();
   }, [loading]);
 
-  // Fetch telemetry respecting the active range selection:
-  // - 'today' & '24h': query bounded by the reporting date/time
-  // - '7d': query the full multi-day pilot monitoring baseline
+  // Fetch telemetry: retrieve all available historical snapshots from the backend
   useEffect(() => {
     let isMounted = true;
     async function fetchTelemetry() {
       try {
         setLoading(true);
-        const params = activeRange === '7d' ? {} : { asOfDate: new Date().toISOString() };
-        const res = await getEnergyUsage(params);
+        const res = await getEnergyUsage({});
         if (isMounted) {
           if (res?.summary?.timeline && res.summary.timeline.length > 0) {
             setRawTimeline(res.summary.timeline);
@@ -73,7 +85,7 @@ export default function EnergyTelemetryChart() {
     return () => {
       isMounted = false;
     };
-  }, [activeRange]);
+  }, []);
 
   // Filter actual historical points in chronological order based on selected temporal window
   const energyData = useMemo(() => {
@@ -84,34 +96,36 @@ export default function EnergyTelemetryChart() {
       (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
     );
 
-    const latestPoint = sorted[sorted.length - 1];
-    const latestTimestamp = new Date(latestPoint.timestamp).getTime();
-    const targetCampusDay = getCampusDayKey(latestPoint.timestamp);
+    const latestPoint = sorted.length > 0 ? sorted[sorted.length - 1] : null;
+    const latestTimestamp = latestPoint ? new Date(latestPoint.timestamp).getTime() : Date.now();
+    const latestCampusDayKey = latestPoint ? getCampusDayKey(latestPoint.timestamp) : getCampusDayKey(new Date());
 
     let points = sorted;
     if (activeRange === 'today') {
-      // Readings strictly for the campus-local reporting day (Asia/Kolkata)
+      // Readings strictly for the authoritative campus reporting day (Asia/Kolkata)
       points = sorted.filter(
-        (p) => getCampusDayKey(p.timestamp) === targetCampusDay
+        (p) => getCampusDayKey(p.timestamp) === latestCampusDayKey
       );
     } else if (activeRange === '24h') {
-      // Readings within 24-hour window relative to the latest point
+      // Readings within 24-hour window relative to the latest available snapshot
       const window24h = 24 * 60 * 60 * 1000;
       points = sorted.filter((p) => {
         const t = new Date(p.timestamp).getTime();
         return latestTimestamp - t <= window24h && t <= latestTimestamp;
       });
     } else if (activeRange === '7d') {
-      // Full multi-day monitoring baseline
+      // Full multi-day monitoring baseline (all available historical snapshots in chronological order)
       points = sorted;
     }
 
     return points.map((pt, idx) => {
       const d = parseCampusDate(pt.timestamp);
-      const demandVal = Number(pt.demandKw) || 0;
-      const solarVal = typeof pt.solarKw === 'number' ? Number(pt.solarKw) : 0;
-      const netVal = Number(Math.max(0, demandVal - solarVal).toFixed(1));
-      const offsetVal = demandVal > 0 ? Number(((solarVal / demandVal) * 100).toFixed(1)) : 0;
+      const hasDemand = pt.hasDemand !== false && pt.demandKw !== null && pt.demandKw !== undefined;
+      const hasSolar = pt.hasSolar !== false && pt.solarKw !== null && pt.solarKw !== undefined;
+      const demandVal = hasDemand ? Number(pt.demandKw) : null;
+      const solarVal = hasSolar ? Number(pt.solarKw) : null;
+      const netVal = hasDemand && hasSolar ? Number(Math.max(0, demandVal - solarVal).toFixed(1)) : null;
+      const offsetVal = hasDemand && hasSolar && demandVal > 0 ? Number(((solarVal / demandVal) * 100).toFixed(1)) : (demandVal === 0 ? 0 : null);
 
       const dateLabel = formatCampusDate(d);
       const fullDateLabel = formatCampusDate(d, { includeYear: true });
@@ -120,6 +134,7 @@ export default function EnergyTelemetryChart() {
       const monthShort = new Intl.DateTimeFormat('en-US', { timeZone: CAMPUS_TIMEZONE, month: 'short' }).format(d);
       const year = new Intl.DateTimeFormat('en-US', { timeZone: CAMPUS_TIMEZONE, year: 'numeric' }).format(d);
       const timeLabel = pt.snapshotLabel || formatCampusTime(d);
+      const cleanTime = extractCleanTime(pt.timestamp, timeLabel);
 
       return {
         id: idx,
@@ -131,9 +146,12 @@ export default function EnergyTelemetryChart() {
         monthShort,
         year,
         timeLabel,
+        cleanTime,
         fullLabel: `${fullDateLabel} · ${timeLabel}`,
         demand: demandVal,
         solar: solarVal,
+        hasDemand,
+        hasSolar,
         energyKWh: Number(pt.energyKWh) || 0,
         netImport: netVal,
         solarOffsetPct: offsetVal,
@@ -161,30 +179,19 @@ export default function EnergyTelemetryChart() {
     const snapshotCount = `${energyData.length} snapshot${energyData.length === 1 ? '' : 's'}`;
 
     if (activeRange === 'today') {
-      // In Today mode, display the campus-local reporting date derived from the active snapshot
-      return `${lastPt.fullDateLabel} · ${snapshotCount}`;
+      const timeSpan = `${firstPt.cleanTime} – ${lastPt.cleanTime} IST`;
+      return `${lastPt.fullDateLabel} · ${snapshotCount} observed (${timeSpan})`;
     }
 
     if (activeRange === '24h') {
-      // 24h window: display the dates spanned by the window
-      if (firstPt.dayKey !== lastPt.dayKey) {
-        if (firstPt.year === lastPt.year) {
-          return `24h window (${firstPt.dateLabel} – ${lastPt.dateLabel}, ${lastPt.year}) · ${snapshotCount}`;
-        }
-        return `24h window (${firstPt.fullDateLabel} – ${lastPt.fullDateLabel}) · ${snapshotCount}`;
-      }
-      return `24h window (${lastPt.fullDateLabel}) · ${snapshotCount}`;
+      return `24h window (${firstPt.dateLabel} ${firstPt.cleanTime} – ${lastPt.dateLabel} ${lastPt.cleanTime} IST) · ${snapshotCount}`;
     }
 
-    // 7d: Full multi-day monitoring baseline
-    if (firstPt.dayKey !== lastPt.dayKey) {
-      if (firstPt.monthShort === lastPt.monthShort && firstPt.year === lastPt.year) {
-        return `${firstPt.monthShort} ${firstPt.dayNumber}–${lastPt.dayNumber}, ${lastPt.year} baseline · ${snapshotCount}`;
-      }
-      return `${firstPt.dateLabel} – ${lastPt.dateLabel}, ${lastPt.year} baseline · ${snapshotCount}`;
-    }
-
-    return `${lastPt.fullDateLabel} baseline · ${snapshotCount}`;
+    const daysCount = new Set(energyData.map((d) => d.dayKey)).size;
+    const dateRange = firstPt.dayKey === lastPt.dayKey
+      ? firstPt.fullDateLabel
+      : `${firstPt.dateLabel} – ${lastPt.fullDateLabel}`;
+    return `${dateRange} baseline · ${snapshotCount} observed across ${daysCount} monitoring day${daysCount === 1 ? '' : 's'}`;
   }, [activeRange, energyData]);
 
   // Chart coordinate parameters
@@ -202,15 +209,36 @@ export default function EnergyTelemetryChart() {
   const maxDemandVal = 200;
   const demandTicks = [0, 100, 200];
 
-  // Solar PV scale in Dual mode (0 – 5.0 kW) aligned symmetrically at the exact same heights (0, 2.5, 5.0)
-  const maxSolarVal = 5.0;
-  const solarTicks = [0, 2.5, 5.0];
+  // Solar PV scale in Dual mode (0 – 20 kW) aligned symmetrically at the exact same heights (0, 10, 20)
+  const maxSolarVal = 20.0;
+  const solarTicks = [0, 10, 20];
 
+  // Actual observation range bounds from the dataset
+  const observationBounds = useMemo(() => {
+    if (!energyData.length) return { firstTime: 0, lastTime: 0, spanMs: 0 };
+    const firstTime = new Date(energyData[0].timestamp).getTime();
+    const lastTime = new Date(energyData[energyData.length - 1].timestamp).getTime();
+    const spanMs = Math.max(0, lastTime - firstTime);
+    return { firstTime, lastTime, spanMs };
+  }, [energyData]);
+
+  // X coordinate mapping: begins at first actual snapshot, ends at last actual snapshot,
+  // with 24px padding for point marker visibility without clipping
   const getX = (idx) => {
-    if (energyData.length <= 1) {
-      return padL + chartW / 2;
+    if (!energyData.length || idx < 0 || idx >= energyData.length) return padL;
+    if (energyData.length === 1) return padL + chartW / 2;
+
+    const xPad = 24;
+    const innerW = chartW - 2 * xPad;
+    const { firstTime, spanMs } = observationBounds;
+
+    if (spanMs > 0) {
+      const t = new Date(energyData[idx].timestamp).getTime();
+      const ratio = Math.max(0, Math.min(1, (t - firstTime) / spanMs));
+      return padL + xPad + ratio * innerW;
     }
-    return padL + (idx / (energyData.length - 1)) * chartW;
+
+    return padL + xPad + (idx / (energyData.length - 1)) * innerW;
   };
 
   const getYDemand = (val) => {
@@ -284,9 +312,11 @@ export default function EnergyTelemetryChart() {
     // Strict horizontal clamping to keep tooltip completely within container boundaries
     tipLeftPx = Math.max(6, Math.min(containerWidth - tipWidth - 6, Math.round(tipLeftPx)));
 
-    const yDemand = getYDemand(activePoint.demand);
-    const ySolar = getYSolar(activePoint.solar);
-    const targetY = (yDemand + ySolar) / 2;
+    const yDemand = activePoint.demand !== null ? getYDemand(activePoint.demand) : null;
+    const ySolar = activePoint.solar !== null ? getYSolar(activePoint.solar) : null;
+    const targetY = (yDemand !== null && ySolar !== null)
+      ? (yDemand + ySolar) / 2
+      : (yDemand !== null ? yDemand : (ySolar !== null ? ySolar : padT + chartH / 2));
 
     // Strict vertical clamping to keep tooltip completely within container boundaries
     const rawTop = targetY > 90 ? targetY - tipHeight + 15 : targetY - 15;
@@ -297,7 +327,7 @@ export default function EnergyTelemetryChart() {
       tooltipTopPx,
       tipWidth,
     };
-  }, [hoverIndex, activePoint, energyData.length, w, h, scaleMode, containerWidth]);
+  }, [hoverIndex, activePoint, energyData.length, w, h, scaleMode, containerWidth, padT, chartH]);
 
   const isValidNumber = (val) =>
     typeof val === 'number' && !Number.isNaN(val) && Number.isFinite(val);
@@ -366,9 +396,9 @@ export default function EnergyTelemetryChart() {
               type="button"
               onClick={() => setScaleMode('dual')}
               className={`${styles.scaleBtn} ${scaleMode === 'dual' ? styles.scaleActiveDual : ''}`}
-              title="Dual Y-Axis: campus demand on left (0–200 kW), solar PV on right (0–5 kW)"
+              title="Dual Y-Axis: campus demand on left (0–200 kW), solar PV on right (0–20 kW)"
             >
-              Dual (0–5 kW)
+              Dual (0–20 kW)
             </button>
             <button
               type="button"
@@ -385,7 +415,7 @@ export default function EnergyTelemetryChart() {
       {/* Telemetry Metric Strip: 4 KPIs in balanced grid */}
       <div className={styles.metricsStrip}>
         <div className={styles.metricItem}>
-          <span className={styles.metricLabel}>Active Demand</span>
+          <span className={styles.metricLabel}>Active Power Demand (kW)</span>
           <span className={styles.metricValue}>
             {hasValidDemand ? (
               <>
@@ -398,7 +428,9 @@ export default function EnergyTelemetryChart() {
         </div>
 
         <div className={styles.metricItem}>
-          <span className={styles.metricLabel}>Solar PV Yield</span>
+          <span className={styles.metricLabel}>
+            Current Solar Output (kW) <span className={styles.simBadge}>[SIM]</span>
+          </span>
           <span className={`${styles.metricValue} ${styles.solarAccent}`}>
             {hasValidSolar ? (
               <>
@@ -411,7 +443,7 @@ export default function EnergyTelemetryChart() {
         </div>
 
         <div className={styles.metricItem}>
-          <span className={styles.metricLabel}>Net Grid Import</span>
+          <span className={styles.metricLabel}>Net Grid Import (kW)</span>
           <span className={`${styles.metricValue} ${styles.netAccent}`}>
             {hasValidDemand && hasValidSolar ? (
               <>
@@ -424,7 +456,7 @@ export default function EnergyTelemetryChart() {
         </div>
 
         <div className={styles.metricItem}>
-          <span className={styles.metricLabel}>Solar Offset</span>
+          <span className={styles.metricLabel}>Solar Offset (%)</span>
           <span className={`${styles.metricValue} ${styles.solarAccent}`}>
             {hasValidDemand && hasValidSolar ? (
               <>
@@ -518,7 +550,7 @@ export default function EnergyTelemetryChart() {
                           strokeWidth="1.2"
                         />
                         <text x={w - padR + 6} y={yPos + 3.5} textAnchor="start" className={styles.axisTextRight}>
-                          {val.toFixed(1)}
+                          {val}
                         </text>
                       </g>
                     );
@@ -546,76 +578,52 @@ export default function EnergyTelemetryChart() {
                   </text>
                 )}
 
-                {/* Solar Array Capacity Reference Line (4.0 kWp Assumed Capacity) */}
-                {scaleMode === 'dual' && (
-                  <g>
-                    <line
-                      x1={padL}
-                      y1={getYSolar(4.0)}
-                      x2={w - padR}
-                      y2={getYSolar(4.0)}
-                      stroke="#0F9D8A"
-                      strokeWidth="1"
-                      strokeDasharray="3 3"
-                      opacity="0.5"
-                    />
-                    {/* Positioned on the left side to avoid colliding with right axis ticks */}
-                    <text
-                      x={padL + 6}
-                      y={getYSolar(4.0) - 4}
-                      textAnchor="start"
-                      fill="#0F9D8A"
-                      fontSize="8.5px"
-                      fontWeight="600"
-                      letterSpacing="0.02em"
-                    >
-                      4.0 kWp Assumed Capacity
-                    </text>
-                  </g>
-                )}
-
-                {/* Linear Polyline Paths */}
+                {/* Linear Polyline Paths & Area Fills */}
                 {(() => {
-                  const demandCoords = energyData.map((d, i) => ({
-                    x: getX(i),
-                    y: getYDemand(d.demand),
-                  }));
-                  const solarCoords = energyData.map((d, i) => ({
-                    x: getX(i),
-                    y: getYSolar(d.solar),
-                  }));
+                  const demandCoords = energyData
+                    .map((d, i) => (d.demand !== null ? { x: getX(i), y: getYDemand(d.demand), i } : null))
+                    .filter(Boolean);
+                  const solarCoords = energyData
+                    .map((d, i) => (d.solar !== null ? { x: getX(i), y: getYSolar(d.solar), i } : null))
+                    .filter(Boolean);
 
                   const dLine = getPolylinePath(demandCoords);
                   const sLine = getPolylinePath(solarCoords);
-
-                  const lastX = getX(energyData.length - 1);
-                  const firstX = getX(0);
                   const baseY = padT + chartH;
 
-                  const dArea = `${dLine} L ${lastX},${baseY} L ${firstX},${baseY} Z`;
-                  const sArea = `${sLine} L ${lastX},${baseY} L ${firstX},${baseY} Z`;
+                  // Area fills cover only the recorded snapshot span, preventing artificial stretching
+                  const dArea = demandCoords.length > 0
+                    ? `${dLine} L ${demandCoords[demandCoords.length - 1].x},${baseY} L ${demandCoords[0].x},${baseY} Z`
+                    : '';
+                  const sArea = solarCoords.length > 0
+                    ? `${sLine} L ${solarCoords[solarCoords.length - 1].x},${baseY} L ${solarCoords[0].x},${baseY} Z`
+                    : '';
 
                   return (
                     <>
                       {/* Solar Area & Path */}
-                      <path d={sArea} fill="url(#solarGrad)" />
-                      <path
-                        d={sLine}
-                        fill="none"
-                        stroke="#0F9D8A"
-                        strokeWidth={scaleMode === 'dual' ? '2.2' : '1.8'}
-                        strokeLinejoin="round"
-                      />
+                      {sArea && <path d={sArea} fill="url(#solarGrad)" />}
+                      {sLine && (
+                        <path
+                          d={sLine}
+                          fill="none"
+                          stroke="#0F9D8A"
+                          strokeWidth={scaleMode === 'dual' ? '2.2' : '1.8'}
+                          strokeLinejoin="round"
+                        />
+                      )}
 
                       {/* Demand Area & Path */}
-                      <path d={dArea} fill="url(#demandGrad)" />
-                      <path
-                        d={dLine}
-                        fill="none"
-                        stroke="#2563EB"
-                        strokeWidth="2.2"
-                        strokeLinejoin="round"
-                      />
+                      {dArea && <path d={dArea} fill="url(#demandGrad)" />}
+                      {dLine && (
+                        <path
+                          d={dLine}
+                          fill="none"
+                          stroke="#2563EB"
+                          strokeWidth="2.2"
+                          strokeLinejoin="round"
+                        />
+                      )}
                     </>
                   );
                 })()}
@@ -623,70 +631,123 @@ export default function EnergyTelemetryChart() {
                 {/* Data Point Markers for Every Actual Reading */}
                 {energyData.map((d, i) => {
                   const isHovered = hoverIndex === i;
-                  const demandY = getYDemand(d.demand);
-                  const solarY = getYSolar(d.solar);
                   const cx = getX(i);
+                  const pointRadius = isHovered ? 5.5 : 3.8;
 
                   return (
                     <g key={`pts-${i}`} pointerEvents="none">
                       {/* Demand Point Marker (Blue) */}
-                      <circle
-                        cx={cx}
-                        cy={demandY}
-                        r={isHovered ? 5.5 : 3.5}
-                        fill="#FFFFFF"
-                        stroke="#2563EB"
-                        strokeWidth={isHovered ? 2.5 : 2}
-                      />
+                      {d.demand !== null && (
+                        <circle
+                          cx={cx}
+                          cy={getYDemand(d.demand)}
+                          r={pointRadius}
+                          fill="#FFFFFF"
+                          stroke="#2563EB"
+                          strokeWidth={isHovered ? 2.5 : 2}
+                        />
+                      )}
 
                       {/* Solar Point Marker (Teal) */}
-                      <circle
-                        cx={cx}
-                        cy={solarY}
-                        r={isHovered ? 5.5 : 3.5}
-                        fill="#FFFFFF"
-                        stroke="#0F9D8A"
-                        strokeWidth={isHovered ? 2.5 : 2}
-                      />
+                      {d.solar !== null && (
+                        <circle
+                          cx={cx}
+                          cy={getYSolar(d.solar)}
+                          r={pointRadius}
+                          fill="#FFFFFF"
+                          stroke="#0F9D8A"
+                          strokeWidth={isHovered ? 2.5 : 2}
+                        />
+                      )}
                     </g>
                   );
                 })}
 
-                {/* X Axis Date / Time Labels */}
-                {energyData.map((d, i) => {
-                  let showLabel = false;
-                  let labelText = d.timeLabel;
+                {/* X Axis Date / Time Labels (Directly aligned with actual snapshot observation timestamps) */}
+                {activeRange === 'today' &&
+                  energyData.map((d, i) => {
+                    const cx = getX(i);
+                    const textAnchor = i === 0 ? 'start' : i === energyData.length - 1 ? 'end' : 'middle';
+                    return (
+                      <text
+                        key={`today-tick-${i}`}
+                        x={cx}
+                        y={h - 6}
+                        textAnchor={textAnchor}
+                        className={styles.axisText}
+                      >
+                        {d.cleanTime}
+                      </text>
+                    );
+                  })}
 
-                  if (activeRange === 'today') {
-                    showLabel = true;
-                    labelText = d.timeLabel.replace(' IST', '');
-                  } else if (activeRange === '24h') {
-                    showLabel = true;
-                    labelText = `${getDayOrdinal(d.dayNumber)} ${d.timeLabel.replace(' IST', '')}`;
-                  } else if (activeRange === '7d') {
-                    // Show date label on midday snapshot of each day (or first/last when few points)
-                    const isMidDay = i % 3 === 1;
-                    const isFirstOrLast = i === 0 || i === energyData.length - 1;
-                    if (isMidDay || (energyData.length <= 5 && isFirstOrLast)) {
-                      showLabel = true;
-                      labelText = d.dateLabel;
-                    }
-                  }
+                {activeRange === '24h' &&
+                  energyData.map((d, i) => {
+                    const cx = getX(i);
+                    const textAnchor = i === 0 ? 'start' : i === energyData.length - 1 ? 'end' : 'middle';
+                    const label = i === 0 || d.dayKey !== energyData[Math.max(0, i - 1)].dayKey
+                      ? `${d.dateLabel} ${d.cleanTime}`
+                      : d.cleanTime;
+                    return (
+                      <text
+                        key={`24h-tick-${i}`}
+                        x={cx}
+                        y={h - 6}
+                        textAnchor={textAnchor}
+                        className={styles.axisText}
+                      >
+                        {label}
+                      </text>
+                    );
+                  })}
 
-                  if (!showLabel) return null;
+                {activeRange === '7d' && (
+                  <>
+                    {(() => {
+                      const dayGroups = {};
+                      energyData.forEach((d, idx) => {
+                        if (!dayGroups[d.dayKey]) dayGroups[d.dayKey] = [];
+                        dayGroups[d.dayKey].push({ ...d, idx });
+                      });
 
-                  return (
-                    <text
-                      key={`time-${i}`}
-                      x={getX(i)}
-                      y={h - 6}
-                      textAnchor="middle"
-                      className={styles.axisText}
-                    >
-                      {labelText}
-                    </text>
-                  );
-                })}
+                      const days = Object.keys(dayGroups);
+
+                      return days.map((dayKey, dIndex) => {
+                        const dayPoints = dayGroups[dayKey];
+                        const midPt = dayPoints[Math.floor(dayPoints.length / 2)];
+                        const midX = getX(midPt.idx);
+
+                        const dividerX = dIndex > 0
+                          ? (getX(dayGroups[days[dIndex - 1]].slice(-1)[0].idx) + getX(dayPoints[0].idx)) / 2
+                          : null;
+
+                        return (
+                          <g key={`day-tick-${dayKey}`}>
+                            {dividerX !== null && (
+                              <line
+                                x1={dividerX}
+                                y1={padT}
+                                x2={dividerX}
+                                y2={padT + chartH}
+                                stroke="#E2E8F0"
+                                strokeDasharray="2 2"
+                                opacity="0.8"
+                              />
+                            )}
+                            <text
+                              x={midX}
+                              y={h - 6}
+                              textAnchor="middle"
+                              className={styles.axisText}
+                            >
+                              {midPt.dateLabel}
+                            </text>
+                          </g>
+                        );
+                      });
+                    })()}
+                  </>
+                )}
 
                 {/* Hover Cursor Vertical Line and Indicator Rings */}
                 {hoverIndex !== null && activePoint && (
@@ -701,22 +762,26 @@ export default function EnergyTelemetryChart() {
                       strokeDasharray="2 2"
                       opacity="0.85"
                     />
-                    <circle
-                      cx={getX(hoverIndex)}
-                      cy={getYDemand(activePoint.demand)}
-                      r="5"
-                      fill="#2563EB"
-                      stroke="#FFFFFF"
-                      strokeWidth="2"
-                    />
-                    <circle
-                      cx={getX(hoverIndex)}
-                      cy={getYSolar(activePoint.solar)}
-                      r="5"
-                      fill="#0F9D8A"
-                      stroke="#FFFFFF"
-                      strokeWidth="2"
-                    />
+                    {activePoint.demand !== null && (
+                      <circle
+                        cx={getX(hoverIndex)}
+                        cy={getYDemand(activePoint.demand)}
+                        r="5"
+                        fill="#2563EB"
+                        stroke="#FFFFFF"
+                        strokeWidth="2"
+                      />
+                    )}
+                    {activePoint.solar !== null && (
+                      <circle
+                        cx={getX(hoverIndex)}
+                        cy={getYSolar(activePoint.solar)}
+                        r="5"
+                        fill="#0F9D8A"
+                        stroke="#FFFFFF"
+                        strokeWidth="2"
+                      />
+                    )}
                   </g>
                 )}
               </svg>
@@ -739,28 +804,40 @@ export default function EnergyTelemetryChart() {
 
                   <div className={styles.tipDivider} />
 
-                  {/* Row 1: Campus Demand */}
+                  {/* Row 1: Active Power Demand */}
                   <div className={styles.tipMetricRow}>
                     <div className={styles.tipMetricLabelCol}>
                       <span className={styles.tipDemandDot} />
-                      <span className={styles.tipMetricName}>Campus Demand</span>
+                      <span className={styles.tipMetricName}>Active Power Demand</span>
                     </div>
                     <div className={styles.tipMetricValCol}>
-                      <span className={styles.tipDemandVal}>{activePoint.demand.toFixed(1)}</span>
-                      <span className={styles.tipUnit}>kW</span>
+                      {activePoint.demand !== null ? (
+                        <>
+                          <span className={styles.tipDemandVal}>{activePoint.demand.toFixed(1)}</span>
+                          <span className={styles.tipUnit}>kW</span>
+                        </>
+                      ) : (
+                        <span className={styles.tipDemandVal}>—</span>
+                      )}
                     </div>
                   </div>
 
-                  {/* Row 2: Solar PV */}
+                  {/* Row 2: Current Solar Output */}
                   <div className={styles.tipMetricRow}>
                     <div className={styles.tipMetricLabelCol}>
                       <span className={styles.tipSolarDot} />
-                      <span className={styles.tipMetricName}>Solar PV</span>
+                      <span className={styles.tipMetricName}>Current Solar Output</span>
                       <span className={styles.tipSimTag}>SIM</span>
                     </div>
                     <div className={styles.tipMetricValCol}>
-                      <span className={styles.tipSolarVal}>{activePoint.solar.toFixed(2)}</span>
-                      <span className={styles.tipUnit}>kW</span>
+                      {activePoint.solar !== null ? (
+                        <>
+                          <span className={styles.tipSolarVal}>{activePoint.solar.toFixed(2)}</span>
+                          <span className={styles.tipUnit}>kW</span>
+                        </>
+                      ) : (
+                        <span className={styles.tipSolarVal}>—</span>
+                      )}
                     </div>
                   </div>
 
@@ -770,8 +847,14 @@ export default function EnergyTelemetryChart() {
                   <div className={styles.tipMetricRow}>
                     <span className={styles.tipMetricNameSub}>Net Grid Import</span>
                     <div className={styles.tipMetricValCol}>
-                      <span className={styles.tipNetVal}>{activePoint.netImport.toFixed(1)}</span>
-                      <span className={styles.tipUnit}>kW</span>
+                      {activePoint.netImport !== null ? (
+                        <>
+                          <span className={styles.tipNetVal}>{activePoint.netImport.toFixed(1)}</span>
+                          <span className={styles.tipUnit}>kW</span>
+                        </>
+                      ) : (
+                        <span className={styles.tipNetVal}>—</span>
+                      )}
                     </div>
                   </div>
 
@@ -779,8 +862,14 @@ export default function EnergyTelemetryChart() {
                   <div className={styles.tipMetricRow}>
                     <span className={styles.tipMetricNameSub}>Solar Offset</span>
                     <div className={styles.tipMetricValCol}>
-                      <span className={styles.tipOffsetVal}>{activePoint.solarOffsetPct.toFixed(1)}</span>
-                      <span className={styles.tipUnit}>%</span>
+                      {activePoint.solarOffsetPct !== null ? (
+                        <>
+                          <span className={styles.tipOffsetVal}>{activePoint.solarOffsetPct.toFixed(1)}</span>
+                          <span className={styles.tipUnit}>%</span>
+                        </>
+                      ) : (
+                        '—'
+                      )}
                     </div>
                   </div>
                 </div>
@@ -793,16 +882,16 @@ export default function EnergyTelemetryChart() {
                 <div className={styles.legendItem}>
                   <span className={styles.legendDot} style={{ background: '#2563EB' }} />
                   <span className={styles.legendText}>
-                    Demand <span className={styles.axisHint}>[0–200 kW]</span>
+                    Active Power Demand <span className={styles.axisHint}>[0–200 kW]</span>
                   </span>
                 </div>
 
                 <div className={styles.legendItem}>
                   <span className={styles.legendDot} style={{ background: '#0F9D8A' }} />
                   <span className={styles.legendText}>
-                    Solar PV <span className={styles.simulatedTag}>[Simulated]</span>{' '}
+                    Current Solar Output <span className={styles.simulatedTag}>[Simulated]</span>{' '}
                     <span className={styles.axisHint}>
-                      {scaleMode === 'dual' ? '[0–5 kW]' : '[0–200 kW]'}
+                      {scaleMode === 'dual' ? '[0–20 kW]' : '[0–200 kW]'}
                     </span>
                   </span>
                 </div>
@@ -810,7 +899,8 @@ export default function EnergyTelemetryChart() {
 
               {activePoint && (
                 <div className={styles.hoverTimeBadge}>
-                  Snapshot: <strong>{activePoint.timeLabel}</strong>
+                  {hoverIndex !== null ? 'Snapshot: ' : 'Latest observation: '}
+                  <strong>{activePoint.timeLabel}</strong>
                   <span className={styles.hoverDateSub}> ({activePoint.dateLabel})</span>
                 </div>
               )}

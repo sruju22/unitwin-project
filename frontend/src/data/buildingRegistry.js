@@ -37,7 +37,7 @@ export function formatBuildingCode(id) {
 }
 
 /**
- * OFFICIAL UNITWIN CAMPUS BUILDING REGISTER
+ * OFFICIAL AIT CAMPUS BUILDING REGISTER
  * Mapped to the CVAT polygon annotations from zz.zip
  */
 const DEFAULT_LOGICAL_BUILDINGS = [
@@ -60,10 +60,11 @@ const DEFAULT_LOGICAL_BUILDINGS = [
     polygonIds: [2],
     location: 'Academic Sector',
     buildingId: 'BLD001',
-    description: 'Academic block housing computer science lecture rooms, smart classrooms, CV Raman & CAED labs.',
-    facilities: ['Classrooms (25)', 'CV Raman Lab', 'CAED Lab', 'Smart Rooms', 'Faculty Staff Rooms'],
-    floors: 3,
-    totalRooms: 25,
+    block: 'C',
+    description: 'Academic block housing computer science lecture rooms, smart classrooms, CV Raman, Capgemini & CAED labs.',
+    facilities: ['Capgemini Lab', 'Sir CV Raman Lab', 'CAED Lab', 'VLSI Lab', 'LIC Lab', 'Virtual Instrument Lab', 'Classrooms (25)', 'Smart Rooms'],
+    floors: 4,
+    totalRooms: 86,
     hasTelemetry: true,
     sensorTypes: ['Occupancy (PIR)', 'Energy (Smart Meter)', 'HVAC Ambient Sensors'],
     verificationStatus: 'verified',
@@ -85,8 +86,14 @@ const DEFAULT_LOGICAL_BUILDINGS = [
     status: 'unknown',
     polygonIds: [4],
     location: 'Academic Sector',
-    description: 'Academic lecture halls and engineering department classrooms.',
-    facilities: ['Lecture Halls', 'Department Library', 'Faculty Cabins'],
+    buildingId: 'BLD001',
+    block: 'B',
+    floors: 4,
+    totalRooms: 12,
+    hasTelemetry: true,
+    sensorTypes: ['Occupancy (PIR)', 'Energy (Smart Meter)'],
+    description: 'Academic lecture halls, Siddartha Lab, and engineering department classrooms.',
+    facilities: ['Siddartha Lab', 'Computer Lab', 'Team Neptunex', 'Computer Lab Back Entrance', 'Lecture Halls'],
   },
   {
     id: 'B05',
@@ -95,8 +102,24 @@ const DEFAULT_LOGICAL_BUILDINGS = [
     status: 'unknown',
     polygonIds: [5],
     location: 'Academic Sector',
-    description: 'Primary academic complex housing science and foundational engineering lecture theatres.',
-    facilities: ['Lecture Theatres', 'Physics Lab', 'Chemistry Lab', 'Student Lounge'],
+    buildingId: 'BLD001',
+    block: 'A',
+    floors: 4,
+    totalRooms: 69,
+    hasTelemetry: true,
+    sensorTypes: ['Occupancy (PIR)', 'Energy (Smart Meter)', 'Environmental Sensors'],
+    description: 'Primary academic complex housing science and foundational engineering laboratories.',
+    facilities: [
+      'Physics Laboratory',
+      'Physics Laboratory - II',
+      'Chemistry Lab',
+      'CAD Lab',
+      'Mathematics Lab',
+      'Career Development Multi Skilling Lab',
+      'Computer Lab',
+      'PG Lab',
+      'Lecture Theatres',
+    ],
   },
   {
     id: 'B06',
@@ -388,7 +411,8 @@ export function getLogicalBuildings() {
       hasTelemetry,
       sensorTypes: base.sensorTypes || [],
       liveTelemetry,
-      buildingId: base.buildingId || id,
+      buildingId: base.buildingId || (['B02', 'B04', 'B05'].includes(id) ? 'BLD001' : id),
+      block: base.block || (id === 'B05' ? 'A' : id === 'B04' ? 'B' : id === 'B02' ? 'C' : undefined),
       lastUpdated: override.lastUpdated || 'Survey Ingest',
     };
   });

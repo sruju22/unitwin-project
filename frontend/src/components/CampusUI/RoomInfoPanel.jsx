@@ -1,13 +1,31 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { getBuilding, getRooms, getTimetables } from '../../api/client';
+import { getBuilding, getRooms, getRoom, getTimetables } from '../../api/client';
+import {
+  getRoomDisplayName,
+  formatRoomTitle,
+  formatRoomSubtitle,
+  getRoomNumber,
+  isLaboratory,
+  hasDesignatedLabName,
+} from '../../utils/roomUtils';
 import styles from './RoomInfoPanel.module.css';
 
 export default function RoomInfoPanel({
   buildingId = 'BLD001',
+  block,
   selectedRoomNumber,
   onSelectRoom,
   onClose,
 }) {
+  // Resolve active block dynamically (props block > room prefix > default 'C')
+  const currentBlock = useMemo(() => {
+    if (block) return block.toUpperCase();
+    if (selectedRoomNumber && /^[a-zA-Z]/.test(selectedRoomNumber)) {
+      return selectedRoomNumber.charAt(0).toUpperCase();
+    }
+    return 'C';
+  }, [block, selectedRoomNumber]);
+
   // Building state
   const [building, setBuilding] = useState(null);
   const [buildingLoading, setBuildingLoading] = useState(true);
@@ -45,23 +63,57 @@ export default function RoomInfoPanel({
     }
   }, [buildingId]);
 
-  // 2. Fetch all Block C rooms from API
+  // 2. Fetch all Block rooms from API (or building rooms)
   const loadRooms = useCallback(async () => {
     setRoomsLoading(true);
     setRoomsError(null);
     try {
-      const res = await getRooms({ buildingId, block: 'C' });
-      if (res?.success && Array.isArray(res.data)) {
-        setRooms(res.data);
-        // If rooms exist and selectedFloor is not set or empty, set to first available floor
-        if (res.data.length > 0) {
-          const floors = Array.from(new Set(res.data.map((r) => r.floorNumber))).sort((a, b) => a - b);
+      const params = { buildingId };
+      if (buildingId === 'BLD001') {
+        params.block = currentBlock;
+      }
+      const res = await getRooms(params);
+      let loaded = res?.success && Array.isArray(res.data) ? res.data : [];
+
+      // If a specific room was passed and is not yet in the list, fetch it directly
+      if (selectedRoomNumber) {
+        const cleanTarget = selectedRoomNumber.toLowerCase().replace(/[^a-z0-9]/g, '');
+        const found = loaded.some(
+          (r) => (r.roomNumber || r.id || '').toLowerCase().replace(/[^a-z0-9]/g, '') === cleanTarget
+        );
+        if (!found) {
+          try {
+            const singleRes = await getRoom(selectedRoomNumber);
+            if (singleRes?.success && singleRes.data) {
+              loaded = [singleRes.data, ...loaded];
+            }
+          } catch {
+            // Standalone or local room fallback
+          }
+        }
+      }
+
+      setRooms(loaded);
+
+      // Align selected floor with selected room if available
+      if (loaded.length > 0) {
+        const cleanTarget = selectedRoomNumber
+          ? selectedRoomNumber.toLowerCase().replace(/[^a-z0-9]/g, '')
+          : null;
+        const targetRoom = cleanTarget
+          ? loaded.find(
+              (r) => (r.roomNumber || r.id || '').toLowerCase().replace(/[^a-z0-9]/g, '') === cleanTarget
+            )
+          : null;
+
+        if (targetRoom && targetRoom.floorNumber !== undefined) {
+          setSelectedFloor(targetRoom.floorNumber);
+        } else {
+          const floors = Array.from(new Set(loaded.map((r) => r.floorNumber))).sort((a, b) => a - b);
           if (!floors.includes(selectedFloor)) {
             setSelectedFloor(floors[0]);
           }
         }
-      } else {
-        throw new Error(res?.error || 'Failed to load rooms list');
       }
     } catch (err) {
       console.error('API Error [getRooms]:', err);
@@ -69,7 +121,7 @@ export default function RoomInfoPanel({
     } finally {
       setRoomsLoading(false);
     }
-  }, [buildingId, selectedFloor]);
+  }, [buildingId, selectedRoomNumber, currentBlock]);
 
   // Initial load
   useEffect(() => {
@@ -116,10 +168,10 @@ export default function RoomInfoPanel({
 
   // Available floors dynamically detected from live records
   const availableFloors = useMemo(() => {
-    if (!rooms.length) return [0, 1, 2];
+    if (!rooms.length) return currentBlock === 'A' ? [1, 2, 3] : [0, 1, 2];
     const set = new Set(rooms.map((r) => r.floorNumber));
     return Array.from(set).sort((a, b) => a - b);
-  }, [rooms]);
+  }, [rooms, currentBlock]);
 
   // Floor label formatter
   const getFloorName = (fn) => {
@@ -133,7 +185,13 @@ export default function RoomInfoPanel({
   // Currently selected room object
   const currentRoom = useMemo(() => {
     if (!selectedRoomNumber) return null;
-    return rooms.find((r) => r.roomNumber.toLowerCase() === selectedRoomNumber.toLowerCase()) || null;
+    const cleanSel = selectedRoomNumber.toLowerCase().replace(/[^a-z0-9]/g, '');
+    return (
+      rooms.find((r) => {
+        const cleanR = (r.roomNumber || r.id || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+        return cleanR === cleanSel || (r.roomNumber && r.roomNumber.toLowerCase() === selectedRoomNumber.toLowerCase());
+      }) || null
+    );
   }, [rooms, selectedRoomNumber]);
 
   // Filtered rooms on current floor
@@ -147,7 +205,7 @@ export default function RoomInfoPanel({
       <aside className={styles.panel} id="room-info-panel">
         <div className={styles.loadingBox}>
           <span className={styles.spinner} />
-          <p className={styles.loadingText}>Fetching Block C inventory from Atlas...</p>
+          <p className={styles.loadingText}>Fetching Block {currentBlock} inventory from Atlas...</p>
         </div>
       </aside>
     );
@@ -201,10 +259,10 @@ export default function RoomInfoPanel({
 
         {/* Room Header */}
         <div className={styles.header}>
-          <span className={styles.roomBadge}>{currentRoom.roomNumber}</span>
+          <span className={styles.roomBadge}>{getRoomNumber(currentRoom)}</span>
           <div className={styles.headerInfo}>
-            <h2 className={styles.title}>{currentRoom.roomNumber}</h2>
-            <p className={styles.subtitle}>{currentRoom.roomType}</p>
+            <h2 className={styles.title}>{formatRoomTitle(currentRoom)}</h2>
+            <p className={styles.subtitle}>{formatRoomSubtitle(currentRoom)}</p>
           </div>
         </div>
 
@@ -213,12 +271,28 @@ export default function RoomInfoPanel({
         {/* Room Metadata Grid */}
         <div className={styles.metaGrid}>
           <div className={styles.metaItem}>
+            <span className={styles.metaLabel}>Room Number</span>
+            <span className={styles.metaValue}>{getRoomNumber(currentRoom)}</span>
+          </div>
+          {currentRoom.roomName && (
+            <div className={styles.metaItem}>
+              <span className={styles.metaLabel}>Designated Lab Name</span>
+              <span className={styles.metaValue} style={{ color: '#0284c7', fontWeight: 600 }}>
+                {currentRoom.roomName}
+              </span>
+            </div>
+          )}
+          <div className={styles.metaItem}>
+            <span className={styles.metaLabel}>Classification</span>
+            <span className={styles.metaValue}>{currentRoom.roomType || 'Space'}</span>
+          </div>
+          <div className={styles.metaItem}>
             <span className={styles.metaLabel}>Building</span>
             <span className={styles.metaValue}>{building?.buildingName || 'Main Building'}</span>
           </div>
           <div className={styles.metaItem}>
             <span className={styles.metaLabel}>Block</span>
-            <span className={styles.metaValue}>{currentRoom.block}</span>
+            <span className={styles.metaValue}>{currentRoom.block || currentBlock}</span>
           </div>
           <div className={styles.metaItem}>
             <span className={styles.metaLabel}>Floor</span>
@@ -226,7 +300,7 @@ export default function RoomInfoPanel({
           </div>
           <div className={styles.metaItem}>
             <span className={styles.metaLabel}>Status</span>
-            <span className={styles.metaValue} style={{ color: '#10b981' }}>{currentRoom.status}</span>
+            <span className={styles.metaValue} style={{ color: '#10b981' }}>{currentRoom.status || 'Active'}</span>
           </div>
         </div>
 
@@ -298,8 +372,8 @@ export default function RoomInfoPanel({
           </svg>
         </div>
         <div className={styles.headerInfo}>
-          <h2 className={styles.title}>Block C</h2>
-          <p className={styles.subtitle}>{building?.buildingName || 'Main Building'} ({buildingId})</p>
+          <h2 className={styles.title}>Block {currentBlock}</h2>
+          <p className={styles.subtitle}>{building?.buildingName || 'Main Building'} ({buildingId} · Block {currentBlock})</p>
         </div>
 
         {onClose && (
@@ -314,12 +388,14 @@ export default function RoomInfoPanel({
       {/* Building Summary Metadata */}
       <div className={styles.metaGrid}>
         <div className={styles.metaItem}>
-          <span className={styles.metaLabel}>Total Block C Rooms</span>
+          <span className={styles.metaLabel}>Total Block {currentBlock} Rooms</span>
           <span className={styles.metaValue}>{rooms.length}</span>
         </div>
         <div className={styles.metaItem}>
           <span className={styles.metaLabel}>Floors</span>
-          <span className={styles.metaValue}>{availableFloors.length} (GF, 1F, 2F)</span>
+          <span className={styles.metaValue}>
+            {availableFloors.length} ({availableFloors.map((fn) => (fn === 0 ? 'GF' : `${fn}F`)).join(', ')})
+          </span>
         </div>
         <div className={styles.metaItem}>
           <span className={styles.metaLabel}>Building Type</span>
@@ -358,24 +434,35 @@ export default function RoomInfoPanel({
       {/* Room Inventory List on Current Floor */}
       <div className={styles.roomList}>
         {floorRooms.length > 0 ? (
-          floorRooms.map((r) => (
-            <button
-              key={r.roomNumber}
-              onClick={() => onSelectRoom && onSelectRoom(r.roomNumber)}
-              className={styles.roomItemBtn}
-            >
-              <div className={styles.roomItemLeft}>
-                <span className={styles.roomNumBadge}>{r.roomNumber}</span>
-                <div className={styles.roomItemDetails}>
-                  <span className={styles.roomTypeName}>{r.roomType}</span>
-                  <span className={styles.roomBlockTag}>Floor {r.floorNumber}</span>
+          floorRooms.map((r) => {
+            const displayName = getRoomDisplayName(r);
+            const isLab = isLaboratory(r);
+            const hasCustomName = hasDesignatedLabName(r);
+
+            return (
+              <button
+                key={r.roomNumber || r.id}
+                onClick={() => onSelectRoom && onSelectRoom(r.roomNumber)}
+                className={styles.roomItemBtn}
+              >
+                <div className={styles.roomItemLeft}>
+                  <span className={styles.roomNumBadge}>{getRoomNumber(r)}</span>
+                  <div className={styles.roomItemDetails}>
+                    <span className={styles.roomTypeName}>{displayName}</span>
+                    <span className={styles.roomBlockTag}>
+                      Floor {r.floorNumber}{hasCustomName && r.roomType !== displayName ? ` • ${r.roomType}` : ''}
+                    </span>
+                  </div>
                 </div>
-              </div>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className={styles.chevronIcon}>
-                <polyline points="9 18 15 12 9 6" />
-              </svg>
-            </button>
-          ))
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  {isLab && <span className={styles.labPill}>LAB</span>}
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className={styles.chevronIcon}>
+                    <polyline points="9 18 15 12 9 6" />
+                  </svg>
+                </div>
+              </button>
+            );
+          })
         ) : (
           <p className={styles.noData}>No rooms mapped for this floor.</p>
         )}

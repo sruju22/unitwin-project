@@ -3,7 +3,7 @@ import Skeleton from './Skeleton';
 import styles from './StatCard.module.css';
 
 /**
- * StatCard — Upgraded KPI metric card for the Unitwin Digital Twin dashboard.
+ * StatCard — Upgraded KPI metric card for the AIT Campus Intelligence dashboard.
  *
  * Features:
  *  - Larger values with tabular numerals

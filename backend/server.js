@@ -16,6 +16,7 @@ const congestionRouter = require('./routes/congestion');
 const maintenanceRouter = require('./routes/maintenance');
 const solarRouter = require('./routes/solar');
 const aiRouter = require('./routes/ai');
+const searchRouter = require('./routes/search');
 
 const app = express();
 const PORT = process.env.PORT || 5001;
@@ -33,7 +34,7 @@ app.use(express.json());
 // MongoDB Connection
 if (!MONGODB_URI) {
   console.warn('NOTE: MONGODB_URI environment variable is not defined in .env');
-  console.warn('Unitwin Backend running in standalone mode (database: disconnected).');
+  console.warn('AIT Campus Intelligence Backend running in standalone mode (database: disconnected).');
 } else {
   mongoose
     .connect(MONGODB_URI)
@@ -47,6 +48,7 @@ if (!MONGODB_URI) {
 
 // API Routes with standalone support
 app.use('/api/buildings', buildingsRouter);
+app.use('/api/search', searchRouter);
 
 // Database connectivity guard for database-exclusive /api routes
 app.use('/api', (req, res, next) => {
@@ -68,10 +70,11 @@ app.get('/', (req, res) => {
 
   res.json({
     status: 'ok',
-    service: 'Unitwin Smart Campus Digital Twin API',
+    service: 'AIT Campus Intelligence API',
     database: dbStatus,
   });
 });
+app.use('/api/buildings', buildingsRouter);
 app.use('/api/rooms', roomsRouter);
 app.use('/api/timetables', timetablesRouter);
 app.use('/api/sections', sectionsRouter);
@@ -107,7 +110,7 @@ app.use((err, req, res, next) => {
 
 // Export app for testability and listen
 const server = app.listen(PORT, () => {
-  console.log(`Unitwin Backend running on port ${PORT}`);
+  console.log(`AIT Campus Intelligence Backend running on port ${PORT}`);
 });
 
 module.exports = { app, server };

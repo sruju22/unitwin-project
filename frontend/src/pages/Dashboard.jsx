@@ -5,6 +5,7 @@ import CampusAerialTwinCard from '../components/Dashboard/CampusAerialTwinCard';
 import CampusIntelligencePanel from '../components/Dashboard/CampusIntelligencePanel';
 import AlertsCommandPanel from '../components/Dashboard/AlertsCommandPanel';
 import { getBuildings, getOccupancy, getEnergyUsage, getAlerts, getInsights } from '../api/client';
+import { formatCampusDate } from '../utils/dateUtils';
 import styles from './Dashboard.module.css';
 
 export default function Dashboard({ onNavigate }) {
@@ -26,7 +27,7 @@ export default function Dashboard({ onNavigate }) {
         const [bldRes, occRes, nrgRes, alrRes, insRes] = await Promise.allSettled([
           getBuildings(),
           getOccupancy({ asOfDate }),
-          getEnergyUsage({ asOfDate }),
+          getEnergyUsage(),
           getAlerts({ asOfDate }),
           getInsights(),
         ]);
@@ -146,16 +147,17 @@ export default function Dashboard({ onNavigate }) {
         ),
       };
 
+  const energyDateLabel = energySummary?.timestamp ? formatCampusDate(energySummary.timestamp) : null;
   const energyKPI = energySummary
     ? {
         id: 'energy',
-        title: 'Current Energy Demand',
+        title: 'Active Power Demand (kW)',
         value: energySummary.latestDemandKw,
         unit: 'kW',
         delta: 'Pilot Baseline',
         deltaUp: true,
         accent: 'teal',
-        secondaryText: `${energySummary.latestEnergyKwh} kWh · ${energySummary.snapshotLabel}`,
+        secondaryText: `${energySummary.latestEnergyKwh} kWh interval · ${energyDateLabel ? `${energyDateLabel}, ` : ''}${energySummary.snapshotLabel}`,
         sparkline: (energySummary.timeline || []).map((t) => t.demandKw),
         loading: loading,
         icon: (
@@ -166,7 +168,7 @@ export default function Dashboard({ onNavigate }) {
       }
     : {
         id: 'energy',
-        title: 'Current Energy Demand',
+        title: 'Active Power Demand (kW)',
         value: '—',
         unit: 'Awaiting data',
         delta: 'Meters Offline',

@@ -6,7 +6,7 @@ const { resolveDateContext } = require('./utils/dateContext');
 
 async function runTests() {
   console.log('================================================================');
-  console.log('UNITWIN TEMPORAL CONSISTENCY & DATE-BOUNDARY VERIFICATION SUITE');
+  console.log('AIT CAMPUS INTELLIGENCE TEMPORAL CONSISTENCY & DATE-BOUNDARY VERIFICATION SUITE');
   console.log('================================================================\n');
 
   if (!process.env.MONGODB_URI) {

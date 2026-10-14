@@ -92,7 +92,7 @@
 /* KPI Grid */
 .kpiGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
   gap: 14px;
 }
 
@@ -299,6 +299,47 @@
   background: var(--status-success);
 }
 
+.panelMetricRow {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-top: 3px;
+}
+
+.panelPowerVal {
+  font-family: var(--font-display);
+  font-size: 14.5px;
+  font-weight: 700;
+  color: #0F9D8A;
+  letter-spacing: -0.01em;
+}
+
+.panelPowerLabel {
+  font-size: 9.5px;
+  font-weight: 500;
+  color: var(--text-muted);
+}
+
+.panelEnergyRow {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding-bottom: 2px;
+  border-bottom: 1px dashed var(--border);
+  margin-bottom: 2px;
+}
+
+.panelEnergyVal {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.panelEnergyLabel {
+  font-size: 9.5px;
+  color: var(--text-muted);
+}
+
 .panelOutput {
   font-family: var(--font-display);
   font-size: 16px;
@@ -308,8 +349,9 @@
 }
 
 .panelCapacity {
-  font-size: 10.5px;
-  color: var(--text-secondary);
+  font-size: 10px;
+  color: var(--text-muted);
+  margin-top: 2px;
 }
 
 /* Appliance Load Strip */

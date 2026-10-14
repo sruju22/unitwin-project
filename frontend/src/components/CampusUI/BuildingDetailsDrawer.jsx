@@ -1,5 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { updateLogicalBuilding, resetLogicalBuilding } from '../../data/buildingRegistry';
+import { getRooms } from '../../api/client';
+import {
+  getRoomDisplayName,
+  getRoomNumber,
+  isLaboratory,
+  hasDesignatedLabName,
+} from '../../utils/roomUtils';
 import styles from './BuildingDetailsDrawer.module.css';
 
 const TYPE_OPTIONS = [
@@ -35,23 +42,82 @@ export default function BuildingDetailsDrawer({
 }) {
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState({
-    name: building.name || '',
-    type: building.type || 'Academic Block',
-    status: building.status || 'unknown',
-    location: building.location || '',
-    description: building.description || '',
-    facilities: (building.facilities || []).join(', '),
+    name: building?.name || '',
+    type: building?.type || 'Academic Block',
+    status: building?.status || 'unknown',
+    location: building?.location || '',
+    description: building?.description || '',
+    facilities: (building?.facilities || []).join(', '),
   });
   const [feedback, setFeedback] = useState(null);
+
+  // Live rooms/labs fetched from backend Atlas
+  const [buildingRooms, setBuildingRooms] = useState([]);
+  const [roomsLoading, setRoomsLoading] = useState(false);
+
+  // Canonical resolution of buildingId and block
+  const resolvedBuildingId = useMemo(() => {
+    if (building?.buildingId && building.buildingId !== building.id) return building.buildingId;
+    if (building?.id === 'B02' || building?.id === 'B04' || building?.id === 'B05') return 'BLD001';
+    if (building?.name?.toUpperCase().includes('BLOCK')) return 'BLD001';
+    return building?.buildingId || null;
+  }, [building]);
+
+  const resolvedBlock = useMemo(() => {
+    if (building?.block) return building.block;
+    if (building?.id === 'B05' || building?.name?.toUpperCase().includes('A-BLOCK')) return 'A';
+    if (building?.id === 'B04' || building?.name?.toUpperCase().includes('B-BLOCK')) return 'B';
+    if (building?.id === 'B02' || building?.name?.toUpperCase().includes('C-BLOCK')) return 'C';
+    return null;
+  }, [building]);
+
+  useEffect(() => {
+    let isMounted = true;
+    if (!resolvedBuildingId) {
+      setBuildingRooms([]);
+      return;
+    }
+
+    setRoomsLoading(true);
+    const queryParams = { buildingId: resolvedBuildingId };
+    if (resolvedBlock) {
+      queryParams.block = resolvedBlock;
+    }
+
+    getRooms(queryParams)
+      .then((res) => {
+        if (!isMounted) return;
+        if (res?.success && Array.isArray(res.data)) {
+          setBuildingRooms(res.data);
+        } else {
+          setBuildingRooms([]);
+        }
+      })
+      .catch(() => {
+        if (isMounted) setBuildingRooms([]);
+      })
+      .finally(() => {
+        if (isMounted) setRoomsLoading(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [resolvedBuildingId, resolvedBlock]);
+
+  const featuredLabs = useMemo(() => {
+    return buildingRooms.filter((r) => isLaboratory(r) || hasDesignatedLabName(r));
+  }, [buildingRooms]);
 
   if (!building) return null;
 
   const statusMeta = STATUS_CONFIG[building.status] || STATUS_CONFIG.unknown;
-  const isCBlock =
+  const isAcademicBlock =
     building.id === 'B02' ||
-    building.code === 'B02' ||
-    building.buildingId === 'BLD001' ||
-    building.name.toUpperCase().includes('C-BLOCK');
+    building.id === 'B04' ||
+    building.id === 'B05' ||
+    resolvedBuildingId === 'BLD001' ||
+    building.name.toUpperCase().includes('BLOCK');
 
   const handleStartEdit = () => {
     setFormData({
@@ -400,6 +466,61 @@ export default function BuildingDetailsDrawer({
           </section>
         )}
 
+        {/* Academic Laboratories & Specialized Rooms fetched from Atlas */}
+        {(featuredLabs.length > 0 || roomsLoading) && (
+          <section className={styles.sectionCard}>
+            <div className={styles.sectionHeadingWithAction}>
+              <div className={styles.sectionHeading}>
+                <span className={styles.sectionIcon}>🔬</span>
+                <h3>Academic Laboratories &amp; Facilities</h3>
+              </div>
+              <span className={styles.labCountBadge}>
+                {featuredLabs.length} Cataloged Labs
+              </span>
+            </div>
+
+            <p className={styles.descText} style={{ marginBottom: '10px' }}>
+              Specialized teaching laboratories and department facilities fetched from the campus database.
+            </p>
+
+            {roomsLoading ? (
+              <div className={styles.labsLoadingBox}>
+                <span>Loading latest laboratory records...</span>
+              </div>
+            ) : (
+              <div className={styles.labListGrid}>
+                {featuredLabs.map((lab) => {
+                  const displayName = getRoomDisplayName(lab);
+                  const roomNum = getRoomNumber(lab);
+
+                  return (
+                    <button
+                      key={lab.roomNumber || lab.id}
+                      onClick={() =>
+                        onOpenRoomInspector &&
+                        onOpenRoomInspector(resolvedBuildingId || 'BLD001', lab.roomNumber, lab.block || resolvedBlock)
+                      }
+                      className={styles.labCardBtn}
+                      title={`Inspect ${displayName} (${roomNum})`}
+                    >
+                      <div className={styles.labCardLeft}>
+                        <span className={styles.labRoomBadge}>{roomNum}</span>
+                        <div className={styles.labCardInfo}>
+                          <span className={styles.labCardName}>{displayName}</span>
+                          <span className={styles.labCardMeta}>
+                            Floor {lab.floorNumber} • {lab.roomType || 'Laboratory'}
+                          </span>
+                        </div>
+                      </div>
+                      <span className={styles.labActionHint}>Inspect &rarr;</span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </section>
+        )}
+
         {/* Telemetry & Sensor Information */}
         <section className={styles.sectionCard}>
           <div className={styles.sectionHeading}>
@@ -446,12 +567,12 @@ export default function BuildingDetailsDrawer({
                 ))}
               </div>
 
-              {isCBlock && onOpenRoomInspector && (
+              {isAcademicBlock && onOpenRoomInspector && (
                 <button
-                  onClick={() => onOpenRoomInspector(building.buildingId || 'BLD001')}
+                  onClick={() => onOpenRoomInspector(resolvedBuildingId || 'BLD001', null, resolvedBlock)}
                   className={styles.inspectorBtn}
                 >
-                  <span>Open Room Level Digital Twin &amp; Timetables</span>
+                  <span>Open {resolvedBlock ? `Block ${resolvedBlock}` : 'Facility'} Room Level Digital Twin &amp; Timetables</span>
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                     <line x1="5" y1="12" x2="19" y2="12" />
                     <polyline points="12 5 19 12 12 19" />

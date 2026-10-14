@@ -1,5 +1,5 @@
 /**
- * Unitwin Smart Campus - Comprehensive Solar Simulation & Energy Analytics Verification Suite
+ * AIT Campus Intelligence - Comprehensive Solar Simulation & Energy Analytics Verification Suite
  * 
  * Verifies all requirements from prompt:
  * 1. Nighttime output is zero; daytime rises, peaks at solar noon, and declines at sunset.
@@ -37,7 +37,7 @@ function runTest(name, fn) {
 }
 
 console.log('================================================================');
-console.log('UNITWIN SOLAR SIMULATION & ANALYTICS VERIFICATION SUITE');
+console.log('AIT CAMPUS INTELLIGENCE SOLAR SIMULATION & ANALYTICS VERIFICATION SUITE');
 console.log('================================================================\n');
 
 // -------------------------------------------------------------
@@ -48,10 +48,10 @@ console.log('--- TEST GROUP 1: Configurable Simulation Assumptions ---');
 runTest('Loads default assumed panel specifications and calculates total capacity', () => {
   const config = getSimulationConfig();
   assert.strictEqual(config.isSimulation, true, 'Must declare isSimulation: true');
-  assert.strictEqual(config.assumedPanelCount, 10, 'Default panel count should be 10');
+  assert.strictEqual(config.assumedPanelCount, 50, 'Default panel count should be 50');
   assert.strictEqual(config.assumedPanelRatingWatts, 400, 'Default panel rating should be 400W');
   assert.strictEqual(config.assumedPanelCapacityKW, 0.4, '0.4 kW per panel');
-  assert.strictEqual(config.assumedInstalledCapacityKW, 4.0, 'Total installed capacity should be 4.0 kWp');
+  assert.strictEqual(config.assumedInstalledCapacityKW, 20.0, 'Total installed capacity should be 20.0 kWp');
   assert(config.disclaimer.includes('unverified demonstration assumptions'), 'Disclaimer must clarify unverified specifications');
 });
 
@@ -90,24 +90,24 @@ runTest('Morning output rises after sunrise (~08:00 AM IST)', () => {
   // 08:00 AM IST = 02:30 UTC
   const morning = calculateSimulatedSolarPower('2026-10-12T02:30:00.000Z');
   assert(morning.isDaylight, 'Morning should be daylight');
-  assert(morning.solarPowerKW > 0.4 && morning.solarPowerKW < 2.0, `Morning power (${morning.solarPowerKW} kW) should be rising`);
+  assert(morning.solarPowerKW > 2.0 && morning.solarPowerKW < 10.0, `Morning power (${morning.solarPowerKW} kW) should be rising`);
 });
 
 runTest('Midday output peaks near solar noon (~12:15 PM IST)', () => {
   // 12:15 PM IST = 06:45 UTC
   const midday = calculateSimulatedSolarPower('2026-10-12T06:45:00.000Z');
   assert(midday.isDaylight, 'Midday must be daylight');
-  assert(midday.solarPowerKW >= 2.8 && midday.solarPowerKW <= 3.6, `Midday peak power (${midday.solarPowerKW} kW) expected near 3.0-3.5 kW`);
+  assert(midday.solarPowerKW >= 14.0 && midday.solarPowerKW <= 18.0, `Midday peak power (${midday.solarPowerKW} kW) expected near 14.0-17.2 kW`);
 });
 
 runTest('Late afternoon output declines toward sunset (~05:00 PM IST)', () => {
   // 05:00 PM IST = 11:30 UTC
   const evening = calculateSimulatedSolarPower('2026-10-12T11:30:00.000Z');
   assert(evening.isDaylight, 'Late afternoon is still daylight before sunset');
-  assert(evening.solarPowerKW > 0.0 && evening.solarPowerKW < 1.5, `Late afternoon power (${evening.solarPowerKW} kW) should decline`);
+  assert(evening.solarPowerKW > 0.0 && evening.solarPowerKW < 8.0, `Late afternoon power (${evening.solarPowerKW} kW) should decline`);
 });
 
-runTest('Instantaneous power never exceeds assumed installed capacity (4.0 kWp)', () => {
+runTest('Instantaneous power never exceeds assumed installed capacity (20.0 kWp)', () => {
   // Test every 15 minutes across a 24-hour cycle
   const base = new Date('2026-10-12T00:00:00.000Z').getTime();
   let maxObserved = 0;
@@ -116,12 +116,12 @@ runTest('Instantaneous power never exceeds assumed installed capacity (4.0 kWp)'
     const reading = calculateSimulatedSolarPower(t);
     if (reading.solarPowerKW > maxObserved) maxObserved = reading.solarPowerKW;
     assert(
-      reading.solarPowerKW <= 4.0,
-      `Solar power (${reading.solarPowerKW} kW) exceeded assumed capacity 4.0 kW at ${t.toISOString()}`
+      reading.solarPowerKW <= 20.0,
+      `Solar power (${reading.solarPowerKW} kW) exceeded assumed capacity 20.0 kW at ${t.toISOString()}`
     );
     assert(reading.solarPowerKW >= 0.0, 'Solar power must never be negative');
   }
-  console.log(`     -> Verified 96 timesteps: Max observed power was ${maxObserved} kW <= 4.0 kWp`);
+  console.log(`     -> Verified 96 timesteps: Max observed power was ${maxObserved} kW <= 20.0 kWp`);
 });
 
 // -------------------------------------------------------------
@@ -189,21 +189,30 @@ runTest('Zero demand produces zero grid import and zero offset percentage', () =
 
 runTest('Surplus solar generation (solar > demand) never results in negative grid import', () => {
   const result = calculateNetGridBalance(2.0, 3.5);
-  assert.strictEqual(result.netImportKW, 0.0, 'Net import must clamp to 0.0 kW when export not modelled');
+  assert.strictEqual(result.netImportKW, 0.0, 'Net import must clamp to 0.0 kW when solar exceeds demand');
+  assert.strictEqual(result.gridExportKW, 1.5, 'Grid export must equal solar - demand (3.5 - 2.0 = 1.5 kW)');
   assert.strictEqual(result.solarOffsetPct, 100.0, 'Solar offset clamps to 100%');
+  assert.strictEqual(result.rawSolarOffsetPct, 175.0, 'Raw solar offset is (3.5 / 2.0) * 100 = 175%');
+});
+
+runTest('Cumulative energy is never treated as instantaneous power and power never exceeds 20.0 kWp', () => {
+  const config = getSimulationConfig();
+  assert.strictEqual(config.assumedInstalledCapacityKW, 20.0);
+  const derivedPower = calculatePowerFromIntervalEnergy(435.0, 1.6667, config);
+  assert(derivedPower <= 20.0, `Instantaneous power must be capped at 20.0 kWp, got ${derivedPower}`);
 });
 
 // -------------------------------------------------------------
 // TEST GROUP 5: Panel Matrix Breakdown Consistency
 // -------------------------------------------------------------
-console.log('\n--- TEST GROUP 5: 10-Panel Module Matrix Consistency ---');
+console.log('\n--- TEST GROUP 5: 50-Panel Module Matrix Consistency ---');
 
-runTest('10 panels sum up to total array output within rounding precision', () => {
-  const arrayPower = 3.34;
+runTest('50 panels sum up to total array output within rounding precision', () => {
+  const arrayPower = 16.86;
   const panels = getPanelBreakdown(arrayPower);
-  assert.strictEqual(panels.length, 10, 'Must produce 10 panel records');
+  assert.strictEqual(panels.length, 50, 'Must produce 50 panel records');
   const sumPower = Number(panels.reduce((acc, p) => acc + p.powerKW, 0).toFixed(2));
-  assert(Math.abs(sumPower - arrayPower) < 0.05, `Panel sum (${sumPower}) should match array power (${arrayPower})`);
+  assert(Math.abs(sumPower - arrayPower) < 0.15, `Panel sum (${sumPower}) should match array power (${arrayPower})`);
   panels.forEach((p) => {
     assert(p.powerKW <= 0.40, `Panel ${p.panelId} output (${p.powerKW} kW) must not exceed 0.40 kW`);
   });
