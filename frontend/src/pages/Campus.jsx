@@ -204,10 +204,10 @@ export default function Campus() {
             <button
               className={`${styles.statusChipBtn} ${statusFilter === 'unknown' ? styles.chipBtnActive : ''}`}
               onClick={() => setStatusFilter(statusFilter === 'unknown' ? 'all' : 'unknown')}
-              title="Filter to unverified / standby facilities"
+              title="Filter to facilities with unverified or unavailable telemetry"
             >
               <span className={styles.chipDot} style={{ background: '#94a3b8' }} />
-              <span>Unk</span>
+              <span>Unavailable</span>
               <span className={styles.chipCountBadge}>{analytics.statusCounts.unknown}</span>
             </button>
           </div>
@@ -241,6 +241,12 @@ export default function Campus() {
             onHoverBuilding={handleHoverBuilding}
             onBuildingsLoaded={handleBuildingsLoaded}
             externalStatusFilter={statusFilter}
+            onStatusFilterChange={setStatusFilter}
+            onOpenRoomInspector={(bldId, rNum, blk) => {
+              setInspectingBuildingId(bldId);
+              setInspectingRoomNumber(rNum || null);
+              setInspectingBlock(blk || (rNum ? rNum.charAt(0).toUpperCase() : null));
+            }}
           />
 
           {/* Room-Level Digital Twin Modal (for C-Block / BLD001) */}
@@ -311,18 +317,34 @@ export default function Campus() {
             </div>
           )}
 
-          {/* Corner HUD labels when drawer is closed */}
-          {!activeDisplayBuilding && (
-            <div className={styles.mapHud} aria-hidden="true">
-              <div className={styles.hudItem}>
-                Survey Altitude: <span>120m AGL</span>
-              </div>
-              <div className={styles.hudItem}>
-                Projection: <span>Orthographic</span>
-              </div>
-              <div className={styles.hudItem}>
-                Active Filter: <span style={{ textTransform: 'capitalize' }}>{statusFilter}</span>
-              </div>
+          {/* Subtle Active Filter indicator when non-default filter is applied */}
+          {statusFilter !== 'all' && !activeDisplayBuilding && (
+            <div className={styles.activeFilterIndicator}>
+              <span
+                className={styles.activeFilterDot}
+                style={{
+                  background:
+                    statusFilter === 'operational'
+                      ? '#10b981'
+                      : statusFilter === 'maintenance'
+                      ? '#06b6d4'
+                      : statusFilter === 'warning'
+                      ? '#f59e0b'
+                      : statusFilter === 'critical'
+                      ? '#ef4444'
+                      : '#94a3b8',
+                }}
+              />
+              <span className={styles.activeFilterText}>
+                Filter: <strong>{statusFilter === 'unknown' ? 'Status unavailable' : statusFilter}</strong>
+              </span>
+              <button
+                className={styles.resetFilterBtn}
+                onClick={() => setStatusFilter('all')}
+                title="Reset active filter"
+              >
+                Reset &times;
+              </button>
             </div>
           )}
         </div>

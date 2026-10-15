@@ -26,7 +26,7 @@ const STATUS_CONFIG = {
   maintenance: { label: 'Under Maintenance', color: '#06b6d4', bg: 'rgba(6, 182, 212, 0.14)' },
   warning:     { label: 'Operational Warning', color: '#f59e0b', bg: 'rgba(245, 158, 11, 0.14)' },
   critical:    { label: 'Critical Incident', color: '#ef4444', bg: 'rgba(239, 68, 68, 0.14)' },
-  unknown:     { label: 'Unknown / Standby', color: '#94a3b8', bg: 'rgba(148, 163, 184, 0.14)' },
+  unknown:     { label: 'Status unavailable', color: '#94a3b8', bg: 'rgba(148, 163, 184, 0.14)' },
 };
 
 export default function BuildingDetailsDrawer({
@@ -345,7 +345,7 @@ export default function BuildingDetailsDrawer({
                     <option value="maintenance">Maintenance</option>
                     <option value="warning">Warning</option>
                     <option value="critical">Critical</option>
-                    <option value="unknown">Unknown</option>
+                    <option value="unknown">Status unavailable</option>
                   </select>
                 </label>
               </div>

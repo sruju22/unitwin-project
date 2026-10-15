@@ -36,6 +36,14 @@ export function formatBuildingCode(id) {
   return num < 10 ? `B0${num}` : `B${num}`;
 }
 
+export const STATUS_META = {
+  operational: { label: 'Operational', color: '#10b981', bg: 'rgba(16, 185, 129, 0.15)', border: 'rgba(16, 185, 129, 0.35)' },
+  maintenance: { label: 'Maintenance', color: '#06b6d4', bg: 'rgba(6, 182, 212, 0.15)', border: 'rgba(6, 182, 212, 0.35)' },
+  warning:     { label: 'Warning',     color: '#f59e0b', bg: 'rgba(245, 158, 11, 0.15)', border: 'rgba(245, 158, 11, 0.35)' },
+  critical:    { label: 'Critical',    color: '#ef4444', bg: 'rgba(239, 68, 68, 0.15)', border: 'rgba(239, 68, 68, 0.35)' },
+  unknown:     { label: 'Status unavailable', color: '#94a3b8', bg: 'rgba(148, 163, 184, 0.15)', border: 'rgba(148, 163, 184, 0.3)' },
+};
+
 /**
  * OFFICIAL AIT CAMPUS BUILDING REGISTER
  * Mapped to the CVAT polygon annotations from zz.zip

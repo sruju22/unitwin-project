@@ -1,16 +1,31 @@
 import React, { useState, useRef, useEffect, useCallback, useMemo, useImperativeHandle, forwardRef } from 'react';
 import { getLogicalBuildings } from '../../data/buildingRegistry';
+import { searchCampus } from '../../api/client';
 import styles from './CampusMap.module.css';
 
 const IMG_WIDTH = 1280;
 const IMG_HEIGHT = 851;
 
+// Official mapping of BLD IDs to 2D spatial codes (B01-B21)
+const BLD_TO_CODE = {
+  BLD001: 'B02', // Main Building / Academic -> C-Block
+  BLD002: 'B10', // Silver Jubilee Building -> S-Block
+  BLD003: 'B06', // Library Building -> Library
+  BLD004: 'B04', // PVP Building -> Academic / B-Block
+  BLD005: 'B17', // Canteen Building -> Canteen
+  BLD006: 'B18', // Boys Hostel Building -> Hostel 1
+  BLD007: 'B07', // Girls Hostel Building -> Girls Hostel
+  BLD008: 'B19', // Boys Hostel Building 2 -> Hostel 2
+  BLD009: 'B20', // Boys Hostel Building 3 -> Hostel 3
+  BLD010: 'B08', // Indoor Sports Complex -> Sports
+};
+
 const STATUS_META = {
-  operational: { label: 'Operational', color: '#10b981', bg: 'rgba(16, 185, 129, 0.15)' },
-  maintenance: { label: 'Maintenance', color: '#06b6d4', bg: 'rgba(6, 182, 212, 0.15)' },
-  warning:     { label: 'Warning',     color: '#f59e0b', bg: 'rgba(245, 158, 11, 0.15)' },
-  critical:    { label: 'Critical',    color: '#ef4444', bg: 'rgba(239, 68, 68, 0.15)' },
-  unknown:     { label: 'Unknown',     color: '#94a3b8', bg: 'rgba(148, 163, 184, 0.15)' },
+  operational: { label: 'Operational', color: '#10b981', bg: 'rgba(16, 185, 129, 0.15)', border: 'rgba(16, 185, 129, 0.35)' },
+  maintenance: { label: 'Maintenance', color: '#06b6d4', bg: 'rgba(6, 182, 212, 0.15)', border: 'rgba(6, 182, 212, 0.35)' },
+  warning:     { label: 'Warning',     color: '#f59e0b', bg: 'rgba(245, 158, 11, 0.15)', border: 'rgba(245, 158, 11, 0.35)' },
+  critical:    { label: 'Critical',    color: '#ef4444', bg: 'rgba(239, 68, 68, 0.15)', border: 'rgba(239, 68, 68, 0.35)' },
+  unknown:     { label: 'Status unavailable', color: '#94a3b8', bg: 'rgba(148, 163, 184, 0.15)', border: 'rgba(148, 163, 184, 0.3)' },
 };
 
 const CampusMap = forwardRef(function CampusMap({
@@ -23,6 +38,8 @@ const CampusMap = forwardRef(function CampusMap({
   onHoverBuilding = null,
   onBuildingsLoaded = null,
   externalStatusFilter = 'all',
+  onStatusFilterChange = null,
+  onOpenRoomInspector = null,
 }, ref) {
   const viewportRef = useRef(null);
   const [transform, setTransform] = useState({ x: 0, y: 0, scale: 1 });
@@ -37,6 +54,7 @@ const CampusMap = forwardRef(function CampusMap({
   const [hoveredBuilding, setHoveredBuilding] = useState(null);
   const [isDroneFlightPlaying, setIsDroneFlightPlaying] = useState(false);
   const [showLegend, setShowLegend] = useState(false);
+  const [showGisInfo, setShowGisInfo] = useState(false);
 
   // Resolved selected building strictly from selection props
   const resolvedSelectedBuilding = useMemo(() => {
@@ -47,24 +65,32 @@ const CampusMap = forwardRef(function CampusMap({
     return null;
   }, [selectedBuilding, selectedBuildingId, buildings]);
 
-  // Priority preview rule:
-  // 1. If a building is selected, display the selected building's preview.
-  // 2. Otherwise, if a building is hovered, display the hover preview.
-  // 3. Otherwise, display no preview.
-  const activePreviewBuilding = resolvedSelectedBuilding || hoveredBuilding;
-  const isPreviewSelected = Boolean(resolvedSelectedBuilding);
-
   // Search & Filter state
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [isSearchFocused, setIsSearchFocused] = useState(false);
+  const [isAdvancedOpen, setIsAdvancedOpen] = useState(false);
+  const [backendSearchResults, setBackendSearchResults] = useState(null);
+  const [isBackendSearching, setIsBackendSearching] = useState(false);
 
-  // Synchronize external status filter (e.g. from Dashboard status card click)
+  const searchRequestIdRef = useRef(0);
+  const searchContainerRef = useRef(null);
+  const searchInputRef = useRef(null);
+  const advancedMenuRef = useRef(null);
+
+  // Synchronize external status filter (e.g. from Dashboard status card click or Campus topBar)
   useEffect(() => {
     if (externalStatusFilter && externalStatusFilter !== statusFilter) {
       setStatusFilter(externalStatusFilter);
     }
   }, [externalStatusFilter]);
+
+  const handleFilterChange = (newFilter) => {
+    setStatusFilter(newFilter);
+    if (onStatusFilterChange) {
+      onStatusFilterChange(newFilter);
+    }
+  };
 
   // 1. Load logical building registry
   const refreshRegistry = useCallback(() => {
@@ -187,9 +213,11 @@ const CampusMap = forwardRef(function CampusMap({
       e.target.tagName === 'polygon' ||
       e.target.closest('polygon') ||
       e.target.closest(`.${styles.hoverTooltip}`) ||
+      e.target.closest(`.${styles.topControlBar}`) ||
       e.target.closest(`.${styles.mapControlSurface}`) ||
       e.target.closest(`.${styles.bottomControls}`) ||
-      e.target.closest(`.${styles.legendBox}`)
+      e.target.closest(`.${styles.legendBox}`) ||
+      e.target.closest(`.${styles.gisInfoBox}`)
     ) {
       return;
     }
@@ -304,56 +332,62 @@ const CampusMap = forwardRef(function CampusMap({
     return list;
   }, [buildings]);
 
-  // 10. Building Screen Coordinates & Preview Card Position Calculation (anchored to active selected building)
+  // 10. Building Screen Coordinates & Hover Card Position Calculation (anchored strictly to hovered building)
   const previewCardData = useMemo(() => {
-    if (!activePreviewBuilding || !activePreviewBuilding.centroid) return null;
+    if (!hoveredBuilding || !hoveredBuilding.centroid) return null;
     const { width: vWidth, height: vHeight } = viewportSize;
     if (vWidth === 0 || vHeight === 0) return null;
 
     // Real screen coordinates reflecting current pan and zoom
-    const screenX = transform.x + activePreviewBuilding.centroid.x * transform.scale;
-    const screenY = transform.y + activePreviewBuilding.centroid.y * transform.scale;
+    const screenX = transform.x + hoveredBuilding.centroid.x * transform.scale;
+    const screenY = transform.y + hoveredBuilding.centroid.y * transform.scale;
 
     // Avoid rendering card if building is scrolled far off-screen
-    if (screenX < -120 || screenX > vWidth + 120 || screenY < -120 || screenY > vHeight + 120) {
+    if (screenX < -150 || screenX > vWidth + 150 || screenY < -150 || screenY > vHeight + 150) {
       return null;
     }
 
     // Approximate building vertical visual radius on screen to keep card off roof
     let approxRadiusY = 24 * transform.scale;
-    if (activePreviewBuilding.geometries && activePreviewBuilding.geometries.length > 0) {
-      const maxH = Math.max(...activePreviewBuilding.geometries.map((g) => g.bbox?.height || 40));
+    if (hoveredBuilding.geometries && hoveredBuilding.geometries.length > 0) {
+      const maxH = Math.max(...hoveredBuilding.geometries.map((g) => g.bbox?.height || 40));
       approxRadiusY = (maxH / 2) * transform.scale;
     }
-    const clampedRadiusY = Math.min(Math.max(approxRadiusY, 20), 100);
+    const clampedRadiusY = Math.min(Math.max(approxRadiusY, 18), 90);
 
-    const CARD_WIDTH = 280;
-    const CARD_HEIGHT = 145;
-    const MARGIN = 16;
+    const CARD_WIDTH = 290;
+    const CARD_HEIGHT = 165;
+    const MARGIN = 14;
     const POINTER_GAP = 10;
 
-    // Center card horizontally on building screenX, clamped within viewport bounds
+    // Docked details drawer on the right occupies 420px when a building is selected on desktop
+    const drawerOffset = (resolvedSelectedBuilding && vWidth > 900) ? 420 : 0;
+    const effectiveRight = vWidth - drawerOffset;
+
+    // Center card horizontally on building screenX, clamped within viewport bounds and clear of drawer
     const minCardX = CARD_WIDTH / 2 + MARGIN;
-    const maxCardX = vWidth - CARD_WIDTH / 2 - MARGIN;
+    const maxCardX = Math.max(minCardX, effectiveRight - CARD_WIDTH / 2 - MARGIN);
     const cardX = Math.max(minCardX, Math.min(screenX, maxCardX));
 
     // Pointer offset relative to card center so arrow points directly to building
     const pointerOffset = screenX - cardX;
-    const clampedPointerOffset = Math.max(-CARD_WIDTH / 2 + 24, Math.min(pointerOffset, CARD_WIDTH / 2 - 24));
+    const clampedPointerOffset = Math.max(-CARD_WIDTH / 2 + 22, Math.min(pointerOffset, CARD_WIDTH / 2 - 22));
 
     // Vertical placement: default ABOVE rooftop
+    // Top control bar at top-left: if card is within left 430px, reserve 68px for search/filter bar
+    const topReserved = (cardX - CARD_WIDTH / 2 < 430) ? 68 : 16;
     let placement = 'above';
     let cardY = screenY - clampedRadiusY - POINTER_GAP;
 
     // If card would clip past top edge of viewport (or top toolbar area)
-    if (cardY - CARD_HEIGHT < 16) {
+    if (cardY - CARD_HEIGHT < topReserved) {
       placement = 'below';
       cardY = screenY + clampedRadiusY + POINTER_GAP;
     }
 
     // Clamp Y if placed below and near bottom
     if (placement === 'below' && cardY + CARD_HEIGHT > vHeight - MARGIN) {
-      cardY = Math.max(MARGIN, vHeight - CARD_HEIGHT - MARGIN);
+      cardY = Math.max(topReserved, vHeight - CARD_HEIGHT - MARGIN);
     }
 
     return {
@@ -362,22 +396,19 @@ const CampusMap = forwardRef(function CampusMap({
       placement,
       pointerOffset: Math.round(clampedPointerOffset),
     };
-  }, [activePreviewBuilding, transform, viewportSize]);
+  }, [hoveredBuilding, transform, viewportSize, resolvedSelectedBuilding]);
 
   const hoverLeaveTimerRef = useRef(null);
   const isPointerOnCardRef = useRef(false);
 
   useEffect(() => {
-    if (!activePreviewBuilding) {
+    if (!hoveredBuilding) {
       isPointerOnCardRef.current = false;
     }
-  }, [activePreviewBuilding]);
+  }, [hoveredBuilding]);
 
   // Multi-polygon Hover & Click events
   const handlePolygonPointerEnter = (building) => {
-    // If pointer is currently interacting with the preview card, suppress polygon hover highlights
-    if (isPointerOnCardRef.current) return;
-
     if (hoverLeaveTimerRef.current) {
       clearTimeout(hoverLeaveTimerRef.current);
       hoverLeaveTimerRef.current = null;
@@ -396,11 +427,13 @@ const CampusMap = forwardRef(function CampusMap({
     }
     // Grace period so moving pointer from building onto its hover card does not flicker or disappear
     hoverLeaveTimerRef.current = setTimeout(() => {
-      setHoveredBuilding(null);
-      if (onHoverBuilding) {
-        onHoverBuilding(null);
+      if (!isPointerOnCardRef.current) {
+        setHoveredBuilding(null);
+        if (onHoverBuilding) {
+          onHoverBuilding(null);
+        }
       }
-    }, 180);
+    }, 120);
   };
 
   const handleCardMouseEnter = () => {
@@ -409,29 +442,19 @@ const CampusMap = forwardRef(function CampusMap({
       clearTimeout(hoverLeaveTimerRef.current);
       hoverLeaveTimerRef.current = null;
     }
-    // When a building is selected, suppress hover highlighting on all other polygons
-    // while the pointer is interacting with the floating preview card
-    if (resolvedSelectedBuilding) {
-      setHoveredBuilding(null);
-      if (onHoverBuilding) {
-        onHoverBuilding(null);
-      }
-    }
   };
 
   const handleCardMouseLeave = () => {
     isPointerOnCardRef.current = false;
-    if (!resolvedSelectedBuilding) {
-      if (hoverLeaveTimerRef.current) {
-        clearTimeout(hoverLeaveTimerRef.current);
-      }
-      hoverLeaveTimerRef.current = setTimeout(() => {
-        setHoveredBuilding(null);
-        if (onHoverBuilding) {
-          onHoverBuilding(null);
-        }
-      }, 150);
+    if (hoverLeaveTimerRef.current) {
+      clearTimeout(hoverLeaveTimerRef.current);
     }
+    hoverLeaveTimerRef.current = setTimeout(() => {
+      setHoveredBuilding(null);
+      if (onHoverBuilding) {
+        onHoverBuilding(null);
+      }
+    }, 100);
   };
 
   const handlePolygonClick = (building, e) => {
@@ -444,6 +467,61 @@ const CampusMap = forwardRef(function CampusMap({
     }
   };
 
+  // Operational counts strictly derived from current logical buildings in state
+  const counts = useMemo(() => {
+    const all = buildings.length;
+    const operational = buildings.filter((b) => b.status === 'operational').length;
+    const maintenance = buildings.filter((b) => b.status === 'maintenance').length;
+    const warning = buildings.filter((b) => b.status === 'warning').length;
+    const critical = buildings.filter((b) => b.status === 'critical').length;
+    const unknown = buildings.filter((b) => b.status === 'unknown').length;
+    return { all, operational, maintenance, warning, critical, unknown };
+  }, [buildings]);
+
+  // Debounced real-time search (200ms) across backend rooms, labs, and areas
+  useEffect(() => {
+    const trimmed = searchQuery.trim();
+    if (!trimmed || trimmed.length < 2) {
+      setBackendSearchResults(null);
+      setIsBackendSearching(false);
+      return;
+    }
+
+    setIsBackendSearching(true);
+    const currentRequestId = ++searchRequestIdRef.current;
+
+    const timer = setTimeout(async () => {
+      try {
+        const resp = await searchCampus({ q: trimmed, types: 'buildings,rooms,areas', limit: 5 });
+        if (searchRequestIdRef.current === currentRequestId) {
+          setBackendSearchResults(resp?.results || null);
+          setIsBackendSearching(false);
+        }
+      } catch {
+        if (searchRequestIdRef.current === currentRequestId) {
+          setBackendSearchResults(null);
+          setIsBackendSearching(false);
+        }
+      }
+    }, 200);
+
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  // Dismiss dropdowns on outside mousedown
+  useEffect(() => {
+    const handleOutsideClick = (e) => {
+      if (searchContainerRef.current && !searchContainerRef.current.contains(e.target)) {
+        setIsSearchFocused(false);
+      }
+      if (advancedMenuRef.current && !advancedMenuRef.current.contains(e.target)) {
+        setIsAdvancedOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleOutsideClick);
+    return () => document.removeEventListener('mousedown', handleOutsideClick);
+  }, []);
+
   // 11. Filtering and search matching on LOGICAL BUILDINGS
   const filteredLogicalBuildings = useMemo(() => {
     return buildings.filter((b) => {
@@ -453,41 +531,87 @@ const CampusMap = forwardRef(function CampusMap({
         const q = searchQuery.toLowerCase().trim();
         const matchesId = b.id.toLowerCase().includes(q);
         const matchesName = b.name.toLowerCase().includes(q);
-        const matchesType = b.type.toLowerCase().includes(q);
+        const matchesType = (b.type || '').toLowerCase().includes(q);
         const matchesLocation = (b.location || '').toLowerCase().includes(q);
         const matchesDesc = (b.description || '').toLowerCase().includes(q);
-        return matchesId || matchesName || matchesType || matchesLocation || matchesDesc;
+        const matchesFac = Array.isArray(b.facilities) && b.facilities.some((f) => f.toLowerCase().includes(q));
+        return matchesId || matchesName || matchesType || matchesLocation || matchesDesc || matchesFac;
       }
       return true;
     });
   }, [buildings, statusFilter, searchQuery]);
 
-  // Search auto-suggest candidates
+  // Unified Search candidates: local building registry + backend rooms/labs & areas
   const searchCandidates = useMemo(() => {
-    if (!searchQuery.trim()) return [];
+    if (!searchQuery.trim()) return { buildings: [], rooms: [], facilities: [], totalCount: 0 };
     const q = searchQuery.toLowerCase().trim();
-    return buildings.filter((b) => {
-      return (
-        b.id.toLowerCase().includes(q) ||
-        b.name.toLowerCase().includes(q) ||
-        b.type.toLowerCase().includes(q) ||
-        (b.location || '').toLowerCase().includes(q)
-      );
+
+    const matchedBuildings = buildings.filter((b) => {
+      const matchesId = b.id.toLowerCase().includes(q);
+      const matchesName = b.name.toLowerCase().includes(q);
+      const matchesType = (b.type || '').toLowerCase().includes(q);
+      const matchesLocation = (b.location || '').toLowerCase().includes(q);
+      const matchesDesc = (b.description || '').toLowerCase().includes(q);
+      const matchesFac = Array.isArray(b.facilities) && b.facilities.some((f) => f.toLowerCase().includes(q));
+      return matchesId || matchesName || matchesType || matchesLocation || matchesDesc || matchesFac;
     });
-  }, [buildings, searchQuery]);
+
+    const rooms = backendSearchResults?.rooms || [];
+    const areas = backendSearchResults?.areas || [];
+
+    return {
+      buildings: matchedBuildings,
+      rooms,
+      facilities: areas,
+      totalCount: matchedBuildings.length + rooms.length + areas.length,
+    };
+  }, [buildings, searchQuery, backendSearchResults]);
+
+  const handleSelectCandidate = (item, type) => {
+    if (type === 'building') {
+      focusBuilding(item);
+      if (onSelectBuilding) onSelectBuilding(item);
+    } else if (type === 'room') {
+      const bldId = item.metadata?.buildingId || 'BLD001';
+      const spatialCode = BLD_TO_CODE[bldId] || bldId;
+      const targetBuilding = buildings.find((b) => b.id === spatialCode || b.id === bldId || b.code === spatialCode);
+      if (targetBuilding) {
+        focusBuilding(targetBuilding);
+        if (onSelectBuilding) onSelectBuilding(targetBuilding);
+      }
+      if (onOpenRoomInspector) {
+        onOpenRoomInspector(bldId, item.metadata?.roomNumber, item.metadata?.block || 'C');
+      }
+    } else if (type === 'facility') {
+      const parent = buildings.find(
+        (b) => b.name.toLowerCase().includes(item.title.toLowerCase()) || b.id === item.metadata?.spatialCode
+      );
+      if (parent) {
+        focusBuilding(parent);
+        if (onSelectBuilding) onSelectBuilding(parent);
+      }
+    }
+    setSearchQuery('');
+    setIsSearchFocused(false);
+  };
 
   // Polygon styling logic: Invisible by default, luminous only on hover or selection
   const getPolygonClass = (polygonItem) => {
     const parent = polygonItem.parentBuilding;
-    const isSelected = (resolvedSelectedBuilding && resolvedSelectedBuilding.id === parent.id) || selectedBuildingId === parent.id;
-    const isHovered = hoveredBuilding && hoveredBuilding.id === parent.id;
+    const isSelected = Boolean(
+      (resolvedSelectedBuilding && resolvedSelectedBuilding.id === parent.id) ||
+      (selectedBuildingId && selectedBuildingId === parent.id)
+    );
+    const isHovered = Boolean(hoveredBuilding && hoveredBuilding.id === parent.id);
     const isDimmed = !filteredLogicalBuildings.some((f) => f.id === parent.id);
 
     const classes = [styles.polygon];
 
     if (isSelected) {
       classes.push(styles.polygonSelected);
-    } else if (isHovered) {
+    }
+
+    if (isHovered) {
       classes.push(styles.polygonHovered);
       if (parent.status === 'critical') classes.push(styles.hoverCritical);
       else if (parent.status === 'warning') classes.push(styles.hoverWarning);
@@ -566,6 +690,7 @@ const CampusMap = forwardRef(function CampusMap({
             viewBox={`0 0 ${IMG_WIDTH} ${IMG_HEIGHT}`}
             className={styles.svgOverlay}
             preserveAspectRatio="none"
+            shapeRendering="geometricPrecision"
           >
             <g id="campus-polygons">
               {flatPolygons.map((poly) => (
@@ -574,6 +699,8 @@ const CampusMap = forwardRef(function CampusMap({
                   id={`polygon-ann-${poly.annotationId}`}
                   points={poly.pointsString}
                   className={getPolygonClass(poly)}
+                  vectorEffect="non-scaling-stroke"
+                  shapeRendering="geometricPrecision"
                   onPointerEnter={() => handlePolygonPointerEnter(poly.parentBuilding)}
                   onPointerLeave={handlePolygonPointerLeave}
                   onPointerDown={(e) => {
@@ -597,8 +724,8 @@ const CampusMap = forwardRef(function CampusMap({
         </div>
       </div>
 
-      {/* Floating Building Preview Card for Active Building (Selected or Hover Priority) */}
-      {activePreviewBuilding && previewCardData && (
+      {/* Floating Building Hover Preview Card (Strictly on Hover) */}
+      {hoveredBuilding && previewCardData && (
         <div
           className={`${styles.hoverTooltip} ${
             previewCardData.placement === 'above' ? styles.tooltipAbove : styles.tooltipBelow
@@ -614,12 +741,10 @@ const CampusMap = forwardRef(function CampusMap({
           onPointerLeave={handleCardMouseLeave}
           onClick={(e) => {
             e.stopPropagation();
-            if (!isPreviewSelected && onSelectBuilding) {
-              onSelectBuilding(activePreviewBuilding);
-            }
+            handlePolygonClick(hoveredBuilding, e);
           }}
           role="region"
-          aria-label={`Preview for ${activePreviewBuilding.name}`}
+          aria-label={`Facility overview for ${hoveredBuilding.name}`}
         >
           {/* Directional connector pointer pointing to building centroid */}
           <div
@@ -631,85 +756,99 @@ const CampusMap = forwardRef(function CampusMap({
             }}
           />
 
-          <div className={styles.tooltipHeader}>
-            <div className={styles.headerLeft}>
-              <span className={styles.tooltipCode}>{activePreviewBuilding.id}</span>
-              <span className={styles.tooltipTypeBadge}>{activePreviewBuilding.type}</span>
-            </div>
-            <div className={styles.headerRight}>
+          {/* 1. Primary Heading: Building Name */}
+          <div className={styles.popupHeader}>
+            <h3 className={styles.popupTitle} title={hoveredBuilding.name}>
+              {hoveredBuilding.name}
+            </h3>
+          </div>
+
+          {/* 2 & 3. Secondary Metadata: Building Code & Function / Type */}
+          <div className={styles.popupSubMeta}>
+            <span className={styles.popupCode}>{hoveredBuilding.id}</span>
+            <span className={styles.metaDivider}>•</span>
+            <span className={styles.popupType}>{hoveredBuilding.type || 'Campus Facility'}</span>
+            {hoveredBuilding.location && (
+              <>
+                <span className={styles.metaDivider}>•</span>
+                <span className={styles.popupLocation}>{hoveredBuilding.location}</span>
+              </>
+            )}
+          </div>
+
+          {/* 4 & 5. Operational Status and Monitoring Breakdown */}
+          <div className={styles.popupMetricsTable}>
+            {/* Tier 4: Operational Status */}
+            <div className={styles.popupMetricRow}>
+              <span className={styles.metricLabel}>Operational Status</span>
               <span
-                className={styles.tooltipStatusBadge}
+                className={styles.statusBadge}
                 style={{
-                  color: (STATUS_META[activePreviewBuilding.status] || STATUS_META.unknown).color,
-                  background: (STATUS_META[activePreviewBuilding.status] || STATUS_META.unknown).bg,
-                  border: `1px solid ${(STATUS_META[activePreviewBuilding.status] || STATUS_META.unknown).color}40`,
+                  color: (STATUS_META[hoveredBuilding.status] || STATUS_META.unknown).color,
+                  background: (STATUS_META[hoveredBuilding.status] || STATUS_META.unknown).bg,
+                  borderColor: (STATUS_META[hoveredBuilding.status] || STATUS_META.unknown).border,
                 }}
               >
                 <span
-                  className={styles.tooltipStatusDot}
-                  style={{ background: (STATUS_META[activePreviewBuilding.status] || STATUS_META.unknown).color }}
-                />
-                {(STATUS_META[activePreviewBuilding.status] || STATUS_META.unknown).label}
-              </span>
-              {isPreviewSelected && (
-                <button
-                  type="button"
-                  className={styles.tooltipCloseBtn}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    isPointerOnCardRef.current = false;
-                    if (onClosePreview) {
-                      onClosePreview();
-                    } else if (onSelectBuilding) {
-                      onSelectBuilding(null);
-                    }
+                  className={styles.statusDot}
+                  style={{
+                    background: (STATUS_META[hoveredBuilding.status] || STATUS_META.unknown).color,
                   }}
-                  aria-label="Close preview"
-                  title="Close preview"
-                >
-                  &times;
-                </button>
-              )}
+                />
+                {(STATUS_META[hoveredBuilding.status] || STATUS_META.unknown).label}
+              </span>
+            </div>
+
+            {/* Tier 5: Monitoring / Data Availability */}
+            <div className={styles.popupMetricRow}>
+              <span className={styles.metricLabel}>Telemetry &amp; Data</span>
+              <span className={styles.monitoringValue}>
+                {hoveredBuilding.hasTelemetry ? (
+                  <span className={styles.telemetryLive}>
+                    <span className={styles.livePulseDot} />
+                    Live IoT Telemetry
+                  </span>
+                ) : (
+                  <span className={styles.telemetrySpatial}>
+                    <span className={styles.cadastreDot} />
+                    Spatial Cadastre Record
+                  </span>
+                )}
+              </span>
             </div>
           </div>
 
-          <div className={styles.tooltipTitle}>{activePreviewBuilding.name}</div>
-
-          <div className={styles.tooltipMetaRow}>
-            <span>📍 {activePreviewBuilding.location || 'Campus Grounds'}</span>
-            <span className={styles.metaDivider}>•</span>
-            <span>{activePreviewBuilding.hasTelemetry ? '🟢 Live IoT' : '🛰️ Monitored'}</span>
-          </div>
-
-          {activePreviewBuilding.description && (
-            <p className={styles.tooltipDesc}>
-              {activePreviewBuilding.description}
+          {/* 6. Short building description if available */}
+          {hoveredBuilding.description && (
+            <p className={styles.popupDesc}>
+              {hoveredBuilding.description}
             </p>
           )}
 
+          {/* 7. Action: View building details */}
           <div
-            className={styles.tooltipFooter}
+            className={styles.popupFooter}
             onClick={(e) => {
               e.stopPropagation();
-              if (onSelectBuilding) {
-                onSelectBuilding(activePreviewBuilding);
-              }
-              if (onInspectBuilding) {
-                onInspectBuilding(activePreviewBuilding);
-              }
+              handlePolygonClick(hoveredBuilding, e);
             }}
             role="button"
             tabIndex={0}
-            title="Click to inspect facility in details panel"
+            title="Click to view full facility details, rooms, and analytics"
           >
-            <span>Click to inspect facility →</span>
+            <span>View building details</span>
+            <span className={styles.footerArrow}>→</span>
           </div>
         </div>
       )}
 
-      {/* Map Floating UI Control Surface */}
-      <div className={styles.mapControlSurface} onClick={(e) => e.stopPropagation()}>
-        <div className={styles.searchContainer}>
+      {/* Map Floating Operational Control Bar (Compact Search & Filter System) */}
+      <div className={styles.topControlBar} onClick={(e) => e.stopPropagation()}>
+        {/* Compact Search Bar with Debounced Backend Integration */}
+        <div
+          className={`${styles.searchContainer} ${isSearchFocused || searchQuery ? styles.searchExpanded : ''}`}
+          ref={searchContainerRef}
+        >
           <svg
             className={styles.searchIcon}
             width="14"
@@ -723,117 +862,244 @@ const CampusMap = forwardRef(function CampusMap({
             <line x1="21" y1="21" x2="16.65" y2="16.65" />
           </svg>
           <input
+            ref={searchInputRef}
             type="text"
             className={styles.searchBar}
-            placeholder="Search campus buildings by name, type, location..."
+            placeholder="Search campus, rooms, labs..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             onFocus={() => setIsSearchFocused(true)}
-            onBlur={() => setTimeout(() => setIsSearchFocused(false), 220)}
+            onKeyDown={(e) => {
+              if (e.key === 'Escape') {
+                setIsSearchFocused(false);
+                searchInputRef.current?.blur();
+              }
+            }}
           />
+          {isBackendSearching && (
+            <span className={styles.searchSpinner} title="Querying live campus database..." />
+          )}
           {searchQuery && (
             <button
               className={styles.clearSearchBtn}
-              onClick={() => setSearchQuery('')}
+              onClick={() => {
+                setSearchQuery('');
+                searchInputRef.current?.focus();
+              }}
               title="Clear search"
             >
               &times;
             </button>
           )}
 
-          {/* Search Dropdown Results */}
+          {/* Search Dropdown with Categorized Live Results */}
           {isSearchFocused && searchQuery.trim() && (
             <div className={styles.searchDropdown}>
-              {searchCandidates.length > 0 ? (
-                searchCandidates.map((cand) => (
-                  <div
-                    key={cand.id}
-                    className={styles.searchDropdownItem}
-                    onMouseDown={() => {
-                      focusBuilding(cand);
-                      if (onSelectBuilding) onSelectBuilding(cand);
-                      setSearchQuery('');
-                    }}
-                  >
-                    <div className={styles.searchItemLeft}>
-                      <div>
-                        <div className={styles.searchItemTitle}>{cand.name}</div>
-                        <div className={styles.searchItemSub}>
-                          <span>{cand.type}</span>
-                          <span>•</span>
-                          <span>{cand.location}</span>
+              {searchCandidates.totalCount > 0 ? (
+                <>
+                  {/* Campus Buildings & Blocks */}
+                  {searchCandidates.buildings.length > 0 && (
+                    <div className={styles.searchGroup}>
+                      <div className={styles.searchGroupHeader}>Campus Buildings &amp; Blocks</div>
+                      {searchCandidates.buildings.map((cand) => (
+                        <div
+                          key={`bld-${cand.id}`}
+                          className={styles.searchDropdownItem}
+                          onMouseDown={() => handleSelectCandidate(cand, 'building')}
+                        >
+                          <div className={styles.searchItemLeft}>
+                            <span className={styles.searchItemIcon}>🏛️</span>
+                            <div>
+                              <div className={styles.searchItemTitle}>{cand.name}</div>
+                              <div className={styles.searchItemSub}>
+                                <span className={styles.searchItemCode}>{cand.id}</span>
+                                <span>•</span>
+                                <span>{cand.type}</span>
+                                <span>•</span>
+                                <span>{cand.location}</span>
+                              </div>
+                            </div>
+                          </div>
+                          <span
+                            className={styles.searchStatusBadge}
+                            style={{
+                              color: (STATUS_META[cand.status] || STATUS_META.unknown).color,
+                              background: (STATUS_META[cand.status] || STATUS_META.unknown).bg,
+                              borderColor: (STATUS_META[cand.status] || STATUS_META.unknown).border,
+                            }}
+                          >
+                            {(STATUS_META[cand.status] || STATUS_META.unknown).label}
+                          </span>
                         </div>
-                      </div>
+                      ))}
                     </div>
-                    <span
-                      style={{
-                        fontSize: '0.65rem',
-                        fontWeight: 700,
-                        padding: '0.15rem 0.45rem',
-                        borderRadius: '4px',
-                        textTransform: 'uppercase',
-                        color: (STATUS_META[cand.status] || STATUS_META.unknown).color,
-                        background: (STATUS_META[cand.status] || STATUS_META.unknown).bg,
-                      }}
-                    >
-                      {(STATUS_META[cand.status] || STATUS_META.unknown).label}
-                    </span>
-                  </div>
-                ))
+                  )}
+
+                  {/* Rooms & Laboratories */}
+                  {searchCandidates.rooms.length > 0 && (
+                    <div className={styles.searchGroup}>
+                      <div className={styles.searchGroupHeader}>Rooms &amp; Laboratories</div>
+                      {searchCandidates.rooms.map((room) => (
+                        <div
+                          key={`room-${room.id}`}
+                          className={styles.searchDropdownItem}
+                          onMouseDown={() => handleSelectCandidate(room, 'room')}
+                        >
+                          <div className={styles.searchItemLeft}>
+                            <span className={styles.searchItemIcon}>🧪</span>
+                            <div>
+                              <div className={styles.searchItemTitle}>{room.title}</div>
+                              <div className={styles.searchItemSub}>
+                                <span>{room.subtitle}</span>
+                              </div>
+                            </div>
+                          </div>
+                          <span className={styles.searchActionTag}>Inspect</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Campus Facilities */}
+                  {searchCandidates.facilities.length > 0 && (
+                    <div className={styles.searchGroup}>
+                      <div className={styles.searchGroupHeader}>Campus Facilities</div>
+                      {searchCandidates.facilities.map((fac) => (
+                        <div
+                          key={`fac-${fac.id}`}
+                          className={styles.searchDropdownItem}
+                          onMouseDown={() => handleSelectCandidate(fac, 'facility')}
+                        >
+                          <div className={styles.searchItemLeft}>
+                            <span className={styles.searchItemIcon}>📍</span>
+                            <div>
+                              <div className={styles.searchItemTitle}>{fac.title}</div>
+                              <div className={styles.searchItemSub}>{fac.subtitle}</div>
+                            </div>
+                          </div>
+                          <span className={styles.searchActionTag}>Locate</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </>
               ) : (
-                <div className={styles.searchNoResults}>No buildings matching "{searchQuery}"</div>
+                <div className={styles.searchNoResults}>
+                  {isBackendSearching ? 'Searching campus register...' : `No campus structures or rooms matching "${searchQuery}"`}
+                </div>
               )}
             </div>
           )}
         </div>
 
-        {/* Operational Status Filter Chips within Control Surface */}
-        <div className={styles.filterRow}>
+        {/* Compact Operational Building Filters */}
+        <div className={styles.filterBar}>
           <button
             className={`${styles.filterChip} ${statusFilter === 'all' ? styles.filterChipActive : ''}`}
-            onClick={() => setStatusFilter('all')}
+            onClick={() => handleFilterChange('all')}
+            title="Show all buildings"
           >
-            All ({buildings.length})
-          </button>
-          <button
-            className={`${styles.filterChip} ${statusFilter === 'operational' ? styles.filterChipActive : ''}`}
-            onClick={() => setStatusFilter('operational')}
-          >
-            <span className={styles.filterDot} style={{ background: '#10b981' }} />
-            Oper ({buildings.filter((b) => b.status === 'operational').length})
-          </button>
-          <button
-            className={`${styles.filterChip} ${statusFilter === 'maintenance' ? styles.filterChipActive : ''}`}
-            onClick={() => setStatusFilter('maintenance')}
-          >
-            <span className={styles.filterDot} style={{ background: '#06b6d4' }} />
-            Maint ({buildings.filter((b) => b.status === 'maintenance').length})
-          </button>
-          <button
-            className={`${styles.filterChip} ${statusFilter === 'warning' ? styles.filterChipActive : ''}`}
-            onClick={() => setStatusFilter('warning')}
-          >
-            <span className={styles.filterDot} style={{ background: '#f59e0b' }} />
-            Warn ({buildings.filter((b) => b.status === 'warning').length})
-          </button>
-          <button
-            className={`${styles.filterChip} ${statusFilter === 'critical' ? styles.filterChipActive : ''}`}
-            onClick={() => setStatusFilter('critical')}
-          >
-            <span className={styles.filterDot} style={{ background: '#ef4444' }} />
-            Crit ({buildings.filter((b) => b.status === 'critical').length})
-          </button>
-          <button
-            className={`${styles.filterChip} ${statusFilter === 'unknown' ? styles.filterChipActive : ''}`}
-            onClick={() => setStatusFilter('unknown')}
-          >
-            <span className={styles.filterDot} style={{ background: '#94a3b8' }} />
-            Unk ({buildings.filter((b) => b.status === 'unknown').length})
+            <span>All</span>
+            <span className={styles.filterCountBadge}>{counts.all}</span>
           </button>
 
+          <button
+            className={`${styles.filterChip} ${statusFilter === 'operational' ? styles.filterChipActive : ''}`}
+            onClick={() => handleFilterChange(statusFilter === 'operational' ? 'all' : 'operational')}
+            title="Filter operational facilities"
+          >
+            <span className={styles.filterDot} style={{ background: '#10b981' }} />
+            <span>Oper</span>
+            <span className={styles.filterCountBadge}>{counts.operational}</span>
+          </button>
+
+          <button
+            className={`${styles.filterChip} ${statusFilter === 'maintenance' ? styles.filterChipActive : ''}`}
+            onClick={() => handleFilterChange(statusFilter === 'maintenance' ? 'all' : 'maintenance')}
+            title="Filter facilities under maintenance"
+          >
+            <span className={styles.filterDot} style={{ background: '#06b6d4' }} />
+            <span>Maint</span>
+            <span className={styles.filterCountBadge}>{counts.maintenance}</span>
+          </button>
+
+          <button
+            className={`${styles.filterChip} ${statusFilter === 'warning' ? styles.filterChipActive : ''}`}
+            onClick={() => handleFilterChange(statusFilter === 'warning' ? 'all' : 'warning')}
+            title="Filter facilities with operational warnings"
+          >
+            <span className={styles.filterDot} style={{ background: '#f59e0b' }} />
+            <span>Warn</span>
+            <span className={styles.filterCountBadge}>{counts.warning}</span>
+          </button>
+
+          <button
+            className={`${styles.filterChip} ${statusFilter === 'critical' ? styles.filterChipActive : ''}`}
+            onClick={() => handleFilterChange(statusFilter === 'critical' ? 'all' : 'critical')}
+            title="Filter facilities with critical incidents"
+          >
+            <span className={styles.filterDot} style={{ background: '#ef4444' }} />
+            <span>Crit</span>
+            <span className={styles.filterCountBadge}>{counts.critical}</span>
+          </button>
+
+          {/* Advanced Filters dropdown for Status unavailable */}
+          <div className={styles.advancedFilterWrapper} ref={advancedMenuRef}>
+            <button
+              className={`${styles.filterChip} ${styles.advancedChip} ${statusFilter === 'unknown' ? styles.filterChipActive : ''}`}
+              onClick={() => setIsAdvancedOpen((prev) => !prev)}
+              title="Advanced filters & unverified facilities"
+            >
+              <span>Advanced</span>
+              <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                <polyline points="6 9 12 15 18 9" />
+              </svg>
+            </button>
+
+            {isAdvancedOpen && (
+              <div className={styles.advancedDropdown}>
+                <div className={styles.advancedHeader}>Advanced Filters</div>
+                <button
+                  className={`${styles.advancedItem} ${statusFilter === 'unknown' ? styles.advancedItemActive : ''}`}
+                  onClick={() => {
+                    handleFilterChange(statusFilter === 'unknown' ? 'all' : 'unknown');
+                    setIsAdvancedOpen(false);
+                  }}
+                >
+                  <div className={styles.advancedItemLeft}>
+                    <span className={styles.filterDot} style={{ background: '#94a3b8' }} />
+                    <div>
+                      <div className={styles.advancedItemTitle}>Status unavailable</div>
+                      <div className={styles.advancedItemDesc}>
+                        Facilities with undetermined telemetry or standby monitoring
+                      </div>
+                    </div>
+                  </div>
+                  <span className={styles.advancedCountBadge}>{counts.unknown}</span>
+                </button>
+                {statusFilter !== 'all' && (
+                  <button
+                    className={styles.advancedResetBtn}
+                    onClick={() => {
+                      handleFilterChange('all');
+                      setIsAdvancedOpen(false);
+                    }}
+                  >
+                    Reset All Filters
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+
           {statusFilter !== 'all' && (
-            <button className={styles.clearFilterBtn} onClick={() => setStatusFilter('all')} title="Reset status filter">
-              &times;
+            <button
+              className={styles.clearFilterPill}
+              onClick={() => handleFilterChange('all')}
+              title="Reset active filter"
+            >
+              <span>Clear filter</span>
+              <span className={styles.clearFilterX}>&times;</span>
             </button>
           )}
         </div>
@@ -882,9 +1148,12 @@ const CampusMap = forwardRef(function CampusMap({
           <div className={styles.btnDivider} />
 
           <button
-            onClick={() => setShowLegend((prev) => !prev)}
+            onClick={() => {
+              setShowLegend((prev) => !prev);
+              setShowGisInfo(false);
+            }}
             className={`${styles.mapBtn} ${showLegend ? styles.mapBtnActive : ''}`}
-            title="Toggle Map Legend"
+            title="Toggle Operational Status Legend"
           >
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <circle cx="12" cy="12" r="10" />
@@ -892,8 +1161,56 @@ const CampusMap = forwardRef(function CampusMap({
               <line x1="12" y1="8" x2="12.01" y2="8" />
             </svg>
           </button>
+
+          <button
+            onClick={() => {
+              setShowGisInfo((prev) => !prev);
+              setShowLegend(false);
+            }}
+            className={`${styles.mapBtn} ${showGisInfo ? styles.mapBtnActive : ''}`}
+            title="Campus GIS & Survey Metadata"
+          >
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <polygon points="12 2 2 7 12 12 22 7 12 2" />
+              <polyline points="2 17 12 22 22 17" />
+              <polyline points="2 12 12 17 22 12" />
+            </svg>
+          </button>
         </div>
       </div>
+
+      {/* Campus GIS & Survey Metadata Popover */}
+      {showGisInfo && (
+        <div className={styles.gisInfoBox} onClick={(e) => e.stopPropagation()}>
+          <div className={styles.gisInfoHeader}>
+            <div className={styles.legendTitle}>Campus GIS Specifications</div>
+            <button className={styles.closeInfoBtn} onClick={() => setShowGisInfo(false)} title="Close Specifications">
+              &times;
+            </button>
+          </div>
+          <div className={styles.gisInfoGrid}>
+            <div className={styles.gisInfoRow}>
+              <span className={styles.gisInfoLabel}>Survey Datum:</span>
+              <span className={styles.gisInfoVal}>120m AGL (Estimated UAV survey datum)</span>
+            </div>
+            <div className={styles.gisInfoRow}>
+              <span className={styles.gisInfoLabel}>Projection:</span>
+              <span className={styles.gisInfoVal}>Planimetric Orthographic 2D</span>
+            </div>
+            <div className={styles.gisInfoRow}>
+              <span className={styles.gisInfoLabel}>Source Resolution:</span>
+              <span className={styles.gisInfoVal}>1280 &times; 851 px UAV Orthophoto</span>
+            </div>
+            <div className={styles.gisInfoRow}>
+              <span className={styles.gisInfoLabel}>Vector Cadastre:</span>
+              <span className={styles.gisInfoVal}>21 Surveyed Building Polygons</span>
+            </div>
+          </div>
+          <div className={styles.gisInfoNote}>
+            True spatial topology mapped directly from verified CVAT survey annotations.
+          </div>
+        </div>
+      )}
 
       {/* Map Legend Popover */}
       {showLegend && (
@@ -949,7 +1266,7 @@ const CampusMap = forwardRef(function CampusMap({
                   borderColor: '#94a3b8',
                 }}
               />
-              <span>Unknown Status</span>
+              <span>Status unavailable</span>
             </div>
             <div className={styles.legendItem}>
               <span

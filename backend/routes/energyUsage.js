@@ -23,6 +23,14 @@ router.get('/', async (req, res, next) => {
         filter.prototype = true;
       }
     }
+    const now = new Date();
+    const todayKolkataStr = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'Asia/Kolkata',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    }).format(now);
+
     if (req.query.snapshotTimestamp) {
       const snapDate = new Date(req.query.snapshotTimestamp);
       if (!isNaN(snapDate.getTime())) {
@@ -31,8 +39,20 @@ router.get('/', async (req, res, next) => {
     } else if (req.query.date) {
       // Filter by YYYY-MM-DD in Asia/Kolkata
       const start = new Date(`${req.query.date}T00:00:00+05:30`);
-      const end = new Date(`${req.query.date}T23:59:59.999+05:30`);
-      filter.timestamp = { $gte: start, $lte: end };
+      const endOfDay = new Date(`${req.query.date}T23:59:59.999+05:30`);
+      let effectiveCutoff = endOfDay;
+
+      if (req.query.asOfDate) {
+        const clientAsOf = new Date(req.query.asOfDate);
+        if (!isNaN(clientAsOf.getTime())) {
+          effectiveCutoff = clientAsOf < endOfDay ? clientAsOf : endOfDay;
+        }
+      } else if (req.query.date === todayKolkataStr) {
+        // When viewing the current day without explicit asOfDate, bound by now (no future leak)
+        effectiveCutoff = now < endOfDay ? now : endOfDay;
+      }
+
+      filter.timestamp = { $gte: start, $lte: effectiveCutoff };
     } else if (req.query.asOfDate) {
       const parsedDate = new Date(req.query.asOfDate);
       if (!isNaN(parsedDate.getTime())) {
@@ -341,6 +361,22 @@ router.get('/', async (req, res, next) => {
       const activeDemandKW = latest.demandKw !== null && latest.demandKw !== undefined ? latest.demandKw : 0;
       const { netImportKW: netDemand, gridExportKW: gridExport, solarOffsetPct: offsetPct } = calculateNetGridBalance(activeDemandKW, activeSolarKW);
 
+      // Peak demand observation within the eligible observation window
+      let peakObs = timeline[0];
+      for (const pt of timeline) {
+        if ((pt.demandKw || 0) > (peakObs.demandKw || 0)) {
+          peakObs = pt;
+        }
+      }
+      const peakDemandKw = peakObs?.demandKw ?? activeDemandKW;
+      const peakEnergyKwh = peakObs?.energyKWh ?? (latest.energyKWh || 0);
+      const peakSnapshotLabel = peakObs?.snapshotLabel ?? latest.snapshotLabel;
+      const peakTimestamp = peakObs?.timestamp ?? latest.timestamp;
+
+      const isHistorical = targetDayKey ? targetDayKey < todayKolkataStr : false;
+      const isToday = targetDayKey ? targetDayKey === todayKolkataStr : true;
+      const isFuture = targetDayKey ? targetDayKey > todayKolkataStr : false;
+
       let reportingPeriod = 'Pilot Telemetry Baseline';
       if (targetDayKey) {
         const d = new Date(`${targetDayKey}T12:00:00+05:30`);
@@ -363,6 +399,14 @@ router.get('/', async (req, res, next) => {
         solarOffsetPct: offsetPct,
         snapshotLabel: latest.snapshotLabel,
         timestamp: latest.timestamp,
+        peakDemandKw,
+        peakEnergyKwh,
+        peakSnapshotLabel,
+        peakTimestamp,
+        observationCount: timeline.length,
+        isHistorical,
+        isToday,
+        isFuture,
         isPrototype: true,
         solarSystemCapacityKW: simConfig.assumedInstalledCapacityKW,
         totalCampusEnergyKWh: totalConsumedKWh,

@@ -30,6 +30,14 @@ router.get('/', async (req, res, next) => {
     if (req.query.timelineLabel) {
       filter.timelineLabel = new RegExp(req.query.timelineLabel, 'i');
     }
+    const now = new Date();
+    const todayKolkataStr = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'Asia/Kolkata',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    }).format(now);
+
     if (req.query.snapshotTimestamp) {
       const snapDate = new Date(req.query.snapshotTimestamp);
       if (!isNaN(snapDate.getTime())) {
@@ -38,8 +46,20 @@ router.get('/', async (req, res, next) => {
     } else if (req.query.date) {
       // Filter by YYYY-MM-DD in Asia/Kolkata
       const start = new Date(`${req.query.date}T00:00:00+05:30`);
-      const end = new Date(`${req.query.date}T23:59:59.999+05:30`);
-      filter.timestamp = { $gte: start, $lte: end };
+      const endOfDay = new Date(`${req.query.date}T23:59:59.999+05:30`);
+      let effectiveCutoff = endOfDay;
+
+      if (req.query.asOfDate) {
+        const clientAsOf = new Date(req.query.asOfDate);
+        if (!isNaN(clientAsOf.getTime())) {
+          effectiveCutoff = clientAsOf < endOfDay ? clientAsOf : endOfDay;
+        }
+      } else if (req.query.date === todayKolkataStr) {
+        // When viewing current day without explicit asOfDate, bound by now (no future leak)
+        effectiveCutoff = now < endOfDay ? now : endOfDay;
+      }
+
+      filter.timestamp = { $gte: start, $lte: effectiveCutoff };
     } else if (req.query.asOfDate) {
       const parsedDate = new Date(req.query.asOfDate);
       if (!isNaN(parsedDate.getTime())) {

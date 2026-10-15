@@ -163,8 +163,10 @@ export default function Dashboard({ onNavigate, reportingDate = '2026-10-14', on
         title: 'Active Power Demand (kW)',
         value: energySummary.latestDemandKw,
         unit: 'kW',
-        delta: 'Pilot Baseline',
-        deltaUp: true,
+        delta: energySummary.isHistorical
+          ? 'Pilot Baseline'
+          : (energySummary.isFuture ? 'Simulation' : 'Live Baseline'),
+        deltaUp: null,
         accent: 'teal',
         secondaryText: `${energySummary.latestEnergyKwh} kWh interval · ${energyDateLabel}, ${energySummary.snapshotLabel}`,
         sparkline: (energySummary.timeline || []).map((t) => t.demandKw),

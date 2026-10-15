@@ -115,7 +115,12 @@ export default function StatCard({
             )}
 
             {secondaryText && (
-              <span className={styles.secondaryText}>{secondaryText}</span>
+              <span
+                className={styles.secondaryText}
+                title={typeof secondaryText === 'string' ? secondaryText : undefined}
+              >
+                {secondaryText}
+              </span>
             )}
           </>
         )}

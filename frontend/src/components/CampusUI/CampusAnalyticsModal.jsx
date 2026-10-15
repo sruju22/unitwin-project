@@ -118,6 +118,20 @@ export default function CampusAnalyticsModal({
             <div className={styles.kpiLabel}>Critical</div>
             <div className={styles.kpiSub}>Click to Filter Map</div>
           </div>
+
+          <div
+            className={styles.kpiCard}
+            onClick={() => {
+              onFilterStatus('unknown');
+              onClose();
+            }}
+          >
+            <div className={styles.kpiNum} style={{ color: '#94a3b8' }}>
+              {analytics.statusCounts.unknown}
+            </div>
+            <div className={styles.kpiLabel}>Status Unavailable</div>
+            <div className={styles.kpiSub}>Click to Filter Map</div>
+          </div>
         </div>
 
         {/* Type distribution breakdown */}
