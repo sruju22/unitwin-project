@@ -8,15 +8,15 @@ const IMG_HEIGHT = 851;
 
 // Official mapping of BLD IDs to 2D spatial codes (B01-B21)
 const BLD_TO_CODE = {
-  BLD001: 'B02', // Main Building / Academic -> C-Block
+  BLD001: 'B02', // Main Building / Academic -> C & B-Block
   BLD002: 'B10', // Silver Jubilee Building -> S-Block
   BLD003: 'B06', // Library Building -> Library
-  BLD004: 'B04', // PVP Building -> Academic / B-Block
-  BLD005: 'B17', // Canteen Building -> Canteen
-  BLD006: 'B18', // Boys Hostel Building -> Hostel 1
+  BLD004: 'B04', // Academic Block -> D-Block
+  BLD005: 'B18', // Canteen Building -> DR AMBEDKAR COLLEGE CANTEEN (Polygon 18)
+  BLD006: 'B19', // Boys Hostel 1 -> BOYS HOSTEL 1 (Polygon 19)
   BLD007: 'B07', // Girls Hostel Building -> Girls Hostel
-  BLD008: 'B19', // Boys Hostel Building 2 -> Hostel 2
-  BLD009: 'B20', // Boys Hostel Building 3 -> Hostel 3
+  BLD008: 'B20', // Boys Hostel 2 -> BOYS HOSTEL 2 (Polygon 20)
+  BLD009: 'B20', // Legacy alias -> B20
   BLD010: 'B08', // Indoor Sports Complex -> Sports
 };
 
@@ -33,12 +33,10 @@ const CampusMap = forwardRef(function CampusMap({
   selectedBuilding = null,
   selectedBuildingId = null,
   onSelectBuilding = null,
-  onInspectBuilding = null,
   onClosePreview = null,
   onHoverBuilding = null,
   onBuildingsLoaded = null,
   externalStatusFilter = 'all',
-  onStatusFilterChange = null,
   onOpenRoomInspector = null,
 }, ref) {
   const viewportRef = useRef(null);
@@ -47,10 +45,12 @@ const CampusMap = forwardRef(function CampusMap({
   const isDragging = useRef(false);
   const dragStartPointer = useRef({ x: 0, y: 0 });
   const didDragMove = useRef(false);
+  const hoverLeaveTimerRef = useRef(null);
+  const isPointerOnCardRef = useRef(false);
   const [isInitialized, setIsInitialized] = useState(false);
 
   // Logical building data & interaction states
-  const [buildings, setBuildings] = useState([]);
+  const [buildings] = useState(() => getLogicalBuildings());
   const [hoveredBuilding, setHoveredBuilding] = useState(null);
   const [isDroneFlightPlaying, setIsDroneFlightPlaying] = useState(false);
   const [showLegend, setShowLegend] = useState(false);
@@ -67,41 +67,21 @@ const CampusMap = forwardRef(function CampusMap({
 
   // Search & Filter state
   const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
+  const statusFilter = externalStatusFilter || 'all';
   const [isSearchFocused, setIsSearchFocused] = useState(false);
-  const [isAdvancedOpen, setIsAdvancedOpen] = useState(false);
   const [backendSearchResults, setBackendSearchResults] = useState(null);
   const [isBackendSearching, setIsBackendSearching] = useState(false);
 
   const searchRequestIdRef = useRef(0);
   const searchContainerRef = useRef(null);
   const searchInputRef = useRef(null);
-  const advancedMenuRef = useRef(null);
 
-  // Synchronize external status filter (e.g. from Dashboard status card click or Campus topBar)
+  // Notify parent of loaded buildings if callback provided
   useEffect(() => {
-    if (externalStatusFilter && externalStatusFilter !== statusFilter) {
-      setStatusFilter(externalStatusFilter);
+    if (onBuildingsLoaded) {
+      onBuildingsLoaded(buildings);
     }
-  }, [externalStatusFilter]);
-
-  const handleFilterChange = (newFilter) => {
-    setStatusFilter(newFilter);
-    if (onStatusFilterChange) {
-      onStatusFilterChange(newFilter);
-    }
-  };
-
-  // 1. Load logical building registry
-  const refreshRegistry = useCallback(() => {
-    const list = getLogicalBuildings();
-    setBuildings(list);
-    if (onBuildingsLoaded) onBuildingsLoaded(list);
-  }, [onBuildingsLoaded]);
-
-  useEffect(() => {
-    refreshRegistry();
-  }, [refreshRegistry]);
+  }, [onBuildingsLoaded, buildings]);
 
   // 2. Measure viewport dimensions dynamically
   useEffect(() => {
@@ -164,6 +144,7 @@ const CampusMap = forwardRef(function CampusMap({
   useEffect(() => {
     if (viewportSize.width === 0 || viewportSize.height === 0) return;
     if (!isInitialized) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       fitToScreen();
       setIsInitialized(true);
     } else {
@@ -398,9 +379,6 @@ const CampusMap = forwardRef(function CampusMap({
     };
   }, [hoveredBuilding, transform, viewportSize, resolvedSelectedBuilding]);
 
-  const hoverLeaveTimerRef = useRef(null);
-  const isPointerOnCardRef = useRef(false);
-
   useEffect(() => {
     if (!hoveredBuilding) {
       isPointerOnCardRef.current = false;
@@ -462,26 +440,25 @@ const CampusMap = forwardRef(function CampusMap({
       e.stopPropagation();
     }
     if (didDragMove.current) return;
+    if (hoverLeaveTimerRef.current) {
+      clearTimeout(hoverLeaveTimerRef.current);
+      hoverLeaveTimerRef.current = null;
+    }
+    isPointerOnCardRef.current = false;
+    setHoveredBuilding(null);
+    if (onHoverBuilding) {
+      onHoverBuilding(null);
+    }
     if (onSelectBuilding) {
       onSelectBuilding(building);
     }
   };
 
-  // Operational counts strictly derived from current logical buildings in state
-  const counts = useMemo(() => {
-    const all = buildings.length;
-    const operational = buildings.filter((b) => b.status === 'operational').length;
-    const maintenance = buildings.filter((b) => b.status === 'maintenance').length;
-    const warning = buildings.filter((b) => b.status === 'warning').length;
-    const critical = buildings.filter((b) => b.status === 'critical').length;
-    const unknown = buildings.filter((b) => b.status === 'unknown').length;
-    return { all, operational, maintenance, warning, critical, unknown };
-  }, [buildings]);
-
   // Debounced real-time search (200ms) across backend rooms, labs, and areas
   useEffect(() => {
     const trimmed = searchQuery.trim();
     if (!trimmed || trimmed.length < 2) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setBackendSearchResults(null);
       setIsBackendSearching(false);
       return;
@@ -513,9 +490,6 @@ const CampusMap = forwardRef(function CampusMap({
     const handleOutsideClick = (e) => {
       if (searchContainerRef.current && !searchContainerRef.current.contains(e.target)) {
         setIsSearchFocused(false);
-      }
-      if (advancedMenuRef.current && !advancedMenuRef.current.contains(e.target)) {
-        setIsAdvancedOpen(false);
       }
     };
     document.addEventListener('mousedown', handleOutsideClick);
@@ -826,19 +800,19 @@ const CampusMap = forwardRef(function CampusMap({
           )}
 
           {/* 7. Action: View building details */}
-          <div
+          <button
+            type="button"
             className={styles.popupFooter}
             onClick={(e) => {
               e.stopPropagation();
               handlePolygonClick(hoveredBuilding, e);
             }}
-            role="button"
-            tabIndex={0}
-            title="Click to view full facility details, rooms, and analytics"
+            title={`View building details for ${hoveredBuilding.name} (${hoveredBuilding.buildingId || hoveredBuilding.id})`}
+            aria-label={`View building details for ${hoveredBuilding.name}`}
           >
             <span>View building details</span>
             <span className={styles.footerArrow}>→</span>
-          </div>
+          </button>
         </div>
       )}
 
@@ -991,118 +965,6 @@ const CampusMap = forwardRef(function CampusMap({
             </div>
           )}
         </div>
-
-        {/* Compact Operational Building Filters */}
-        <div className={styles.filterBar}>
-          <button
-            className={`${styles.filterChip} ${statusFilter === 'all' ? styles.filterChipActive : ''}`}
-            onClick={() => handleFilterChange('all')}
-            title="Show all buildings"
-          >
-            <span>All</span>
-            <span className={styles.filterCountBadge}>{counts.all}</span>
-          </button>
-
-          <button
-            className={`${styles.filterChip} ${statusFilter === 'operational' ? styles.filterChipActive : ''}`}
-            onClick={() => handleFilterChange(statusFilter === 'operational' ? 'all' : 'operational')}
-            title="Filter operational facilities"
-          >
-            <span className={styles.filterDot} style={{ background: '#10b981' }} />
-            <span>Oper</span>
-            <span className={styles.filterCountBadge}>{counts.operational}</span>
-          </button>
-
-          <button
-            className={`${styles.filterChip} ${statusFilter === 'maintenance' ? styles.filterChipActive : ''}`}
-            onClick={() => handleFilterChange(statusFilter === 'maintenance' ? 'all' : 'maintenance')}
-            title="Filter facilities under maintenance"
-          >
-            <span className={styles.filterDot} style={{ background: '#06b6d4' }} />
-            <span>Maint</span>
-            <span className={styles.filterCountBadge}>{counts.maintenance}</span>
-          </button>
-
-          <button
-            className={`${styles.filterChip} ${statusFilter === 'warning' ? styles.filterChipActive : ''}`}
-            onClick={() => handleFilterChange(statusFilter === 'warning' ? 'all' : 'warning')}
-            title="Filter facilities with operational warnings"
-          >
-            <span className={styles.filterDot} style={{ background: '#f59e0b' }} />
-            <span>Warn</span>
-            <span className={styles.filterCountBadge}>{counts.warning}</span>
-          </button>
-
-          <button
-            className={`${styles.filterChip} ${statusFilter === 'critical' ? styles.filterChipActive : ''}`}
-            onClick={() => handleFilterChange(statusFilter === 'critical' ? 'all' : 'critical')}
-            title="Filter facilities with critical incidents"
-          >
-            <span className={styles.filterDot} style={{ background: '#ef4444' }} />
-            <span>Crit</span>
-            <span className={styles.filterCountBadge}>{counts.critical}</span>
-          </button>
-
-          {/* Advanced Filters dropdown for Status unavailable */}
-          <div className={styles.advancedFilterWrapper} ref={advancedMenuRef}>
-            <button
-              className={`${styles.filterChip} ${styles.advancedChip} ${statusFilter === 'unknown' ? styles.filterChipActive : ''}`}
-              onClick={() => setIsAdvancedOpen((prev) => !prev)}
-              title="Advanced filters & unverified facilities"
-            >
-              <span>Advanced</span>
-              <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                <polyline points="6 9 12 15 18 9" />
-              </svg>
-            </button>
-
-            {isAdvancedOpen && (
-              <div className={styles.advancedDropdown}>
-                <div className={styles.advancedHeader}>Advanced Filters</div>
-                <button
-                  className={`${styles.advancedItem} ${statusFilter === 'unknown' ? styles.advancedItemActive : ''}`}
-                  onClick={() => {
-                    handleFilterChange(statusFilter === 'unknown' ? 'all' : 'unknown');
-                    setIsAdvancedOpen(false);
-                  }}
-                >
-                  <div className={styles.advancedItemLeft}>
-                    <span className={styles.filterDot} style={{ background: '#94a3b8' }} />
-                    <div>
-                      <div className={styles.advancedItemTitle}>Status unavailable</div>
-                      <div className={styles.advancedItemDesc}>
-                        Facilities with undetermined telemetry or standby monitoring
-                      </div>
-                    </div>
-                  </div>
-                  <span className={styles.advancedCountBadge}>{counts.unknown}</span>
-                </button>
-                {statusFilter !== 'all' && (
-                  <button
-                    className={styles.advancedResetBtn}
-                    onClick={() => {
-                      handleFilterChange('all');
-                      setIsAdvancedOpen(false);
-                    }}
-                  >
-                    Reset All Filters
-                  </button>
-                )}
-              </div>
-            )}
-          </div>
-
-          {statusFilter !== 'all' && (
-            <button
-              className={styles.clearFilterPill}
-              onClick={() => handleFilterChange('all')}
-              title="Reset active filter"
-            >
-              <span>Clear filter</span>
-              <span className={styles.clearFilterX}>&times;</span>
-            </button>
-          )}
-        </div>
       </div>
 
       {/* Floating Bottom Left Navigation Controls */}
@@ -1168,29 +1030,37 @@ const CampusMap = forwardRef(function CampusMap({
               setShowLegend(false);
             }}
             className={`${styles.mapBtn} ${showGisInfo ? styles.mapBtnActive : ''}`}
-            title="Campus GIS & Survey Metadata"
+            title="Map Information & Specifications"
           >
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <polygon points="12 2 2 7 12 12 22 7 12 2" />
-              <polyline points="2 17 12 22 22 17" />
-              <polyline points="2 12 12 17 22 12" />
+              <circle cx="12" cy="12" r="10" />
+              <line x1="12" y1="16" x2="12" y2="12" />
+              <line x1="12" y1="8" x2="12.01" y2="8" />
             </svg>
           </button>
         </div>
       </div>
 
-      {/* Campus GIS & Survey Metadata Popover */}
+      {/* Map Information & Survey Specifications Popover */}
       {showGisInfo && (
         <div className={styles.gisInfoBox} onClick={(e) => e.stopPropagation()}>
           <div className={styles.gisInfoHeader}>
-            <div className={styles.legendTitle}>Campus GIS Specifications</div>
+            <div className={styles.legendTitle}>Map Information &amp; Specifications</div>
             <button className={styles.closeInfoBtn} onClick={() => setShowGisInfo(false)} title="Close Specifications">
               &times;
             </button>
           </div>
           <div className={styles.gisInfoGrid}>
             <div className={styles.gisInfoRow}>
-              <span className={styles.gisInfoLabel}>Survey Datum:</span>
+              <span className={styles.gisInfoLabel}>Active Layer Filter:</span>
+              <span className={styles.gisInfoVal}>
+                {statusFilter === 'all'
+                  ? `All Buildings (${buildings.length} total)`
+                  : `${statusFilter === 'unknown' ? 'Unavailable' : statusFilter.charAt(0).toUpperCase() + statusFilter.slice(1)} (${filteredLogicalBuildings.length} active)`}
+              </span>
+            </div>
+            <div className={styles.gisInfoRow}>
+              <span className={styles.gisInfoLabel}>Survey Altitude:</span>
               <span className={styles.gisInfoVal}>120m AGL (Estimated UAV survey datum)</span>
             </div>
             <div className={styles.gisInfoRow}>
@@ -1204,6 +1074,10 @@ const CampusMap = forwardRef(function CampusMap({
             <div className={styles.gisInfoRow}>
               <span className={styles.gisInfoLabel}>Vector Cadastre:</span>
               <span className={styles.gisInfoVal}>21 Surveyed Building Polygons</span>
+            </div>
+            <div className={styles.gisInfoRow}>
+              <span className={styles.gisInfoLabel}>Coordinate System:</span>
+              <span className={styles.gisInfoVal}>Canvas / Local Orthographic</span>
             </div>
           </div>
           <div className={styles.gisInfoNote}>

@@ -3,25 +3,25 @@ const path = require('path');
 
 const OFFICIAL_REGISTER = {
   B01: { name: 'administrative block', type: 'Administration', status: 'unknown' },
-  B02: { name: 'C-BLOCK', type: 'Academic Block', status: 'unknown', isCBlock: true, buildingId: 'BLD001' },
+  B02: { name: 'C & B-BLOCK', type: 'Academic Block', status: 'unknown', isCBlock: true, buildingId: 'BLD001', blocks: ['C', 'B'] },
   B03: { name: 'AUDITORIUM', type: 'Auditorium', status: 'unknown' },
-  B04: { name: 'B-BLOCK', type: 'Academic Block', status: 'unknown' },
+  B04: { name: 'D-BLOCK', type: 'Academic Block', status: 'unknown', block: 'D' },
   B05: { name: 'A-BLOCK', type: 'Academic Block', status: 'unknown' },
-  B06: { name: 'LIBRARY', type: 'Library', status: 'unknown' },
-  B07: { name: 'GIRLS HOSTEL', type: 'Hostel', status: 'unknown' },
-  B08: { name: 'INDOOR SPORTS COMPLEX', type: 'Sports Facility', status: 'unknown' },
+  B06: { name: 'LIBRARY', type: 'Library', status: 'unknown', buildingId: 'BLD003' },
+  B07: { name: 'GIRLS HOSTEL', type: 'Hostel', status: 'unknown', buildingId: 'BLD007' },
+  B08: { name: 'INDOOR SPORTS COMPLEX', type: 'Sports Facility', status: 'unknown', buildingId: 'BLD010' },
   B09: { name: 'OUTDOOR SPORTS FEILD', type: 'Sports Facility', status: 'unknown' },
-  B10: { name: 'S-BLOCK', type: 'Academic Block', status: 'unknown' },
+  B10: { name: 'S-BLOCK', type: 'Academic Block', status: 'unknown', buildingId: 'BLD002', block: 'Silver Jubilee' },
   B11: { name: 'WORKSHOP', type: 'Academic Block', status: 'unknown' },
   B12: { name: 'WORKSHOP', type: 'Academic Block', status: 'unknown' },
   B13: { name: 'WORKSHOP', type: 'Academic Block', status: 'unknown' },
   B14: { name: 'WORKSHOP', type: 'Academic Block', status: 'unknown' },
   B15: { name: 'CAR PARKING', type: 'Parking', status: 'unknown' },
   B16: { name: 'ROCK GARDEN', type: 'Other', status: 'unknown' },
-  B17: { name: 'DR AMBEDKAR COLLEGE CANTEEN', type: 'Canteen', status: 'unknown' },
-  B18: { name: 'BOYS HOSTEL -1', type: 'Hostel', status: 'unknown' },
-  B19: { name: 'BOYS HOSTEL 2', type: 'Hostel', status: 'unknown' },
-  B20: { name: 'BOYS HOSTEL-3', type: 'Hostel', status: 'unknown' },
+  B17: { name: 'COLLEGE MAIN GATE', type: 'Gate', status: 'unknown' },
+  B18: { name: 'DR AMBEDKAR COLLEGE CANTEEN', type: 'Canteen', status: 'unknown', buildingId: 'BLD005' },
+  B19: { name: 'BOYS HOSTEL 2', type: 'Hostel', status: 'unknown', buildingId: 'BLD008' },
+  B20: { name: 'BOYS HOSTEL 3', type: 'Hostel', status: 'unknown', buildingId: 'BLD009' },
   B21: { name: 'DATA CENTRE', type: 'Other', status: 'unknown' },
 };
 
@@ -48,7 +48,7 @@ function getDefaultBuildings() {
         const isCBlock = Boolean(meta.isCBlock || code === 'B02');
 
         return {
-          buildingId: isCBlock ? 'BLD001' : code,
+          buildingId: meta.buildingId || (isCBlock ? 'BLD001' : code),
           buildingCode: code,
           annotationId: ann.id,
           buildingName: meta.name,

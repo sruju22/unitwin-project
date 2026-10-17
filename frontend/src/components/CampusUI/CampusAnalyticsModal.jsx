@@ -11,8 +11,8 @@ export default function CampusAnalyticsModal({
   const [search, setSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState('all');
 
-  const analytics = useMemo(() => getCampusLogicalAnalytics(), [isOpen]);
-  const buildings = useMemo(() => getLogicalBuildings(), [isOpen]);
+  const analytics = useMemo(() => (isOpen ? getCampusLogicalAnalytics() : null), [isOpen]);
+  const buildings = useMemo(() => (isOpen ? getLogicalBuildings() : []), [isOpen]);
 
   const filtered = useMemo(() => {
     return buildings.filter((b) => {

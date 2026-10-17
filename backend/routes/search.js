@@ -22,12 +22,12 @@ const BLD_TO_CODE = {
   BLD001: 'B02', // Main Building -> C-Block
   BLD002: 'B10', // Silver Jubilee Building -> S-Block
   BLD003: 'B06', // Library Building -> Library
-  BLD004: 'B04', // PVP Building -> Academic
-  BLD005: 'B17', // Canteen Building -> Canteen
-  BLD006: 'B18', // Boys Hostel Building -> Hostel 1
+  BLD004: 'B04', // Academic Block -> D-Block
+  BLD005: 'B18', // Canteen Building -> DR AMBEDKAR COLLEGE CANTEEN (Polygon 18)
+  BLD006: 'B19', // Boys Hostel 1 -> BOYS HOSTEL 1 (Polygon 19)
   BLD007: 'B07', // Girls Hostel Building -> Girls Hostel
-  BLD008: 'B19', // Boys Hostel Building 2 -> Hostel 2
-  BLD009: 'B20', // Boys Hostel Building 3 -> Hostel 3
+  BLD008: 'B20', // Boys Hostel 2 -> BOYS HOSTEL 2 (Polygon 20)
+  BLD009: 'B20', // Legacy alias -> B20
   BLD010: 'B08', // Indoor Sports Complex -> Sports
 };
 

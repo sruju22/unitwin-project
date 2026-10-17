@@ -174,3 +174,43 @@ export function formatRoomSubtitle(room) {
 
   return type || 'Academic Space';
 }
+
+/**
+ * Determines whether a room is excluded from the room preview visualization.
+ * Excluded room types:
+ * - Girls' hostel rooms
+ * - Boys' hostel rooms
+ * - Washrooms (men's, women's, gents, ladies, staff, boys, girls washrooms)
+ */
+export function isRoomPreviewExcluded(room) {
+  if (!room) return false;
+  const type = String(room.roomType || room.type || '').trim().toLowerCase();
+  const name = String(room.roomName || room.name || room.label || '').trim().toLowerCase();
+  const bldId = String(room.buildingId || '').toUpperCase();
+
+  // 1. Exclude washrooms
+  if (
+    type.includes('washroom') ||
+    type.includes('toilet') ||
+    name.includes('washroom') ||
+    name.includes('toilet')
+  ) {
+    return true;
+  }
+
+  // 2. Exclude hostel rooms (Girls' hostel and Boys' hostels)
+  if (
+    type.includes('hostel room') ||
+    type.includes('dormitory') ||
+    type.includes('living quarters') ||
+    bldId === 'BLD006' ||
+    bldId === 'BLD007' ||
+    bldId === 'BLD008' ||
+    bldId === 'BLD009'
+  ) {
+    return true;
+  }
+
+  return false;
+}
+

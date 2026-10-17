@@ -126,7 +126,7 @@ export default function App() {
         />
       );
     }
-    if (activePage === 'campus') return <Campus />;
+    if (activePage === 'campus') return <Campus reportingDate={reportingDate} />;
     if (activePage === 'analytics') return <Analytics onNavigate={handleNavigate} reportingDate={reportingDate} onSelectDate={handleSelectDate} />;
     if (activePage === 'occupancy') return <Occupancy reportingDate={reportingDate} onSelectDate={handleSelectDate} />;
     if (activePage === 'energy') {

@@ -4,7 +4,7 @@ import { formatCampusDate, formatCampusDateTime } from '../utils/dateUtils';
 import Skeleton from '../components/Skeleton';
 import styles from './Energy.module.css';
 
-export default function Energy({ onNavigate, reportingDate = '2026-10-14', onSelectDate }) {
+export default function Energy({ reportingDate = '2026-10-14', onSelectDate }) {
   const [energyData, setEnergyData] = useState(null);
   const [solarData, setSolarData] = useState(null);
   const [energyAlerts, setEnergyAlerts] = useState([]);

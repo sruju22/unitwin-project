@@ -157,5 +157,37 @@ export async function searchCampus(params = {}) {
   return response.data;
 }
 
+/**
+ * Camera Live Video Streaming APIs (C-110 Smart Classroom only)
+ */
+export async function getCameraStatus(roomId = 'c110') {
+  const cleanId = roomId.toLowerCase().replace(/[^a-z0-9]/g, '');
+  const response = await apiClient.get(`/api/camera/${cleanId}/status`);
+  return response.data;
+}
+
+export async function startCameraStream(roomId = 'c110', clientId) {
+  const cleanId = roomId.toLowerCase().replace(/[^a-z0-9]/g, '');
+  const response = await apiClient.post(`/api/camera/${cleanId}/start`, { clientId });
+  return response.data;
+}
+
+export async function stopCameraStream(roomId = 'c110', clientId, force = false) {
+  const cleanId = roomId.toLowerCase().replace(/[^a-z0-9]/g, '');
+  const response = await apiClient.post(`/api/camera/${cleanId}/stop`, { clientId, force });
+  return response.data;
+}
+
+export async function sendCameraHeartbeat(roomId = 'c110', clientId) {
+  const cleanId = roomId.toLowerCase().replace(/[^a-z0-9]/g, '');
+  const response = await apiClient.post(`/api/camera/${cleanId}/heartbeat`, { clientId });
+  return response.data;
+}
+
+export function getCameraStreamUrl(roomId = 'c110') {
+  const cleanId = roomId.toLowerCase().replace(/[^a-z0-9]/g, '');
+  return `${API_BASE_URL}/api/camera/${cleanId}/stream.m3u8`;
+}
+
 export default apiClient;
 

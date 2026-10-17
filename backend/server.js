@@ -1,7 +1,8 @@
 const express = require('express');
 const cors = require('cors');
+const path = require('path');
 const mongoose = require('mongoose');
-require('dotenv').config();
+require('dotenv').config({ path: path.join(__dirname, '.env') });
 
 const buildingsRouter = require('./routes/buildings');
 const roomsRouter = require('./routes/rooms');
@@ -17,6 +18,7 @@ const maintenanceRouter = require('./routes/maintenance');
 const solarRouter = require('./routes/solar');
 const aiRouter = require('./routes/ai');
 const searchRouter = require('./routes/search');
+const cameraRouter = require('./routes/camera');
 
 const app = express();
 const PORT = process.env.PORT || 5001;
@@ -49,6 +51,7 @@ if (!MONGODB_URI) {
 // API Routes with standalone support
 app.use('/api/buildings', buildingsRouter);
 app.use('/api/search', searchRouter);
+app.use('/api/camera', cameraRouter);
 
 // Database connectivity guard for database-exclusive /api routes
 app.use('/api', (req, res, next) => {
@@ -111,6 +114,14 @@ app.use((err, req, res, next) => {
 // Export app for testability and listen
 const server = app.listen(PORT, () => {
   console.log(`AIT Campus Intelligence Backend running on port ${PORT}`);
+});
+
+server.on('error', (err) => {
+  if (err.code === 'EADDRINUSE') {
+    console.log(`Port ${PORT} is already in use by another instance, attaching tests to existing server.`);
+  } else {
+    console.error('Server error:', err.message);
+  }
 });
 
 module.exports = { app, server };

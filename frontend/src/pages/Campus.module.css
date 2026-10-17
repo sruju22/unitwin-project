@@ -11,144 +11,342 @@
   background: var(--bg-base);
 }
 
-/* ── Consolidated Campus Toolbar ── */
+/* ── Consolidated Campus Toolbar (Reduced Height & Single Status/Filter Interface) ── */
 .topBar {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 8px 20px;
-  min-height: 46px;
+  padding: 6px 18px;
+  min-height: 40px;
+  max-height: 44px;
   border-bottom: 1px solid var(--border);
   background: var(--bg-surface, #FFFFFF);
-  gap: 16px;
+  gap: 12px;
   flex-shrink: 0;
-  z-index: 10;
+  z-index: 20;
+}
+
+.leftSection {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
 }
 
 .buildingLabel {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 7px;
+  white-space: nowrap;
 }
 
 .toolbarIcon {
-  font-size: 14px;
+  font-size: 13px;
+  line-height: 1;
 }
 
 .blockName {
   font-family: var(--font-display);
-  font-size: 13.5px;
+  font-size: 13px;
   font-weight: 700;
   color: var(--text-heading);
   letter-spacing: -0.01em;
   margin: 0;
+  white-space: nowrap;
 }
 
 .toolbarDivider {
   color: var(--border-hover, #CBD5E1);
-  font-size: 11px;
+  font-size: 10px;
 }
 
 .blockSub {
-  font-size: 12px;
+  font-size: 11.5px;
   color: var(--text-secondary);
+  white-space: nowrap;
 }
 
-.liveTag {
-  font-size: 10.5px;
-  font-weight: 600;
-  color: var(--status-success);
-  background: var(--status-success-bg);
-  border: 1px solid var(--status-success-border);
-  padding: 2px 7px;
-  border-radius: 99px;
+.rightSection {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+/* 1. Single Compact Status Summary */
+.statusSummaryBar {
   display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  margin-left: 4px;
-}
-
-.liveDot {
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
-  background: var(--status-success);
-}
-
-.topChips {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.chipSegmentGroup {
-  display: flex;
   align-items: center;
   background: var(--bg-subtle, #F8FAFC);
   border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 2px;
+  border-radius: 6px;
+  padding: 2px 4px;
   gap: 2px;
+  font-size: 11px;
+  line-height: 1;
 }
 
-.statusChipBtn {
+.statusSummaryItem {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   background: transparent;
   border: 1px solid transparent;
+  border-radius: 4px;
+  padding: 2px 6px;
+  cursor: pointer;
+  transition: all 0.12s ease;
+  line-height: 1.2;
+}
+
+.statusSummaryItem:hover {
+  background: var(--bg-hover, #F1F5F9);
+}
+
+.summaryItemActive {
+  background: #FFFFFF !important;
+  border-color: var(--border) !important;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
+}
+
+.summaryLabel {
+  color: var(--text-secondary);
+  font-weight: 500;
+  font-size: 10.5px;
+}
+
+.summaryVal {
+  color: var(--text-heading);
+  font-weight: 700;
+  font-family: var(--font-mono, monospace);
+  font-size: 10.5px;
+}
+
+.summaryBadge {
+  font-weight: 700;
+  color: var(--text-heading);
+  font-family: var(--font-mono, monospace);
+  font-size: 10.5px;
+  background: rgba(15, 23, 42, 0.06);
+  padding: 0 4px;
+  border-radius: 3px;
+}
+
+.summaryDivider {
+  color: var(--border-hover, #CBD5E1);
+  font-size: 10px;
+  margin: 0 1px;
+}
+
+.summaryDot {
+  width: 5.5px;
+  height: 5.5px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+/* 2. Compact Filters Button & Popover */
+.filterControlWrapper {
+  position: relative;
+}
+
+.filterBtn {
+  background: var(--bg-subtle, #F8FAFC);
+  border: 1px solid var(--border);
+  color: var(--text-heading);
   padding: 3px 8px;
   border-radius: 6px;
-  font-size: 11.5px;
-  color: var(--text-secondary);
-  display: flex;
+  font-size: 11px;
+  font-weight: 600;
+  display: inline-flex;
   align-items: center;
   gap: 5px;
   cursor: pointer;
   transition: all 0.15s ease;
-  font-weight: 500;
+  line-height: 1.3;
 }
 
-.statusChipBtn:hover {
+.filterBtn:hover {
   background: var(--bg-hover, #F1F5F9);
-  color: var(--text-heading);
+  border-color: var(--border-hover, #CBD5E1);
 }
 
-.chipBtnActive {
-  background: #FFFFFF !important;
-  border-color: var(--border) !important;
-  color: var(--text-heading) !important;
-  font-weight: 600 !important;
-  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
+.filterBtnActive {
+  background: rgba(37, 99, 235, 0.08) !important;
+  border-color: rgba(37, 99, 235, 0.45) !important;
+  color: var(--primary-blue, #2563EB) !important;
 }
 
-.chipDot {
+.filterActiveDot {
   width: 6px;
   height: 6px;
   border-radius: 50%;
   flex-shrink: 0;
 }
 
-.chipCountBadge {
-  font-size: 10px;
+.filterCaret {
+  transition: transform 0.15s ease;
+  color: var(--text-secondary);
+}
+
+.caretOpen {
+  transform: rotate(180deg);
+}
+
+/* Filters Popover Panel */
+.filterPopover {
+  position: absolute;
+  top: calc(100% + 5px);
+  right: 0;
+  width: 250px;
+  background: #FFFFFF;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.12), 0 8px 10px -6px rgba(0, 0, 0, 0.08);
+  padding: 6px;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  animation: popoverFadeIn 0.15s ease;
+}
+
+@keyframes popoverFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.popoverHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 6px 6px 6px;
+  border-bottom: 1px solid var(--border-subtle, #F1F5F9);
+  margin-bottom: 2px;
+}
+
+.popoverTitle {
+  font-size: 10.5px;
   font-weight: 700;
-  padding: 1px 4px;
-  border-radius: 4px;
-  background: rgba(15, 23, 42, 0.06);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-secondary);
+}
+
+.popoverResetTextBtn {
+  background: transparent;
+  border: none;
+  color: var(--status-error, #EF4444);
+  font-size: 10.5px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+  transition: opacity 0.15s ease;
+}
+
+.popoverResetTextBtn:hover {
+  opacity: 0.8;
+  text-decoration: underline;
+}
+
+.popoverList {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.popoverItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 5px 8px;
+  border-radius: 5px;
+  border: 1px solid transparent;
+  background: transparent;
+  cursor: pointer;
+  transition: all 0.12s ease;
+  width: 100%;
+  text-align: left;
+}
+
+.popoverItem:hover {
+  background: var(--bg-hover, #F8FAFC);
+}
+
+.popoverItemActive {
+  background: rgba(37, 99, 235, 0.08) !important;
+  border-color: rgba(37, 99, 235, 0.25) !important;
+}
+
+.popoverItemLeft {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+}
+
+.popoverItemIcon {
+  font-size: 11px;
+  line-height: 1;
+}
+
+.popoverDot {
+  width: 6.5px;
+  height: 6.5px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.popoverItemLabel {
+  font-size: 11.5px;
+  font-weight: 500;
   color: var(--text-heading);
 }
 
+.popoverItemSub {
+  font-size: 9.5px;
+  color: var(--text-secondary);
+  line-height: 1.2;
+}
+
+.popoverCountBadge {
+  font-size: 10px;
+  font-weight: 700;
+  font-family: var(--font-mono, monospace);
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: var(--bg-subtle, #F1F5F9);
+  color: var(--text-heading);
+}
+
+.popoverDivider {
+  height: 1px;
+  background: var(--border-subtle, #F1F5F9);
+  margin: 3px 0;
+}
+
+/* 3. Register & Analytics Action */
 .analyticsTriggerBtn {
   background: var(--primary-blue, #2563EB);
   border: 1px solid var(--primary-blue, #2563EB);
   color: #FFFFFF;
-  padding: 5px 12px;
+  padding: 4px 10px;
   border-radius: 6px;
-  font-size: 11.5px;
+  font-size: 11px;
   font-weight: 600;
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 5px;
   cursor: pointer;
   transition: all 0.15s ease;
   box-shadow: 0 1px 2px rgba(37, 99, 235, 0.15);
+  line-height: 1.2;
 }
 
 .analyticsTriggerBtn:hover {
@@ -176,82 +374,17 @@
 }
 
 .detailsPanelWrapper {
-  width: 420px;
-  height: 100%;
-  flex-shrink: 0;
-  padding: 12px 12px 12px 0;
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  bottom: 12px;
+  width: 440px;
+  max-width: calc(100vw - 24px);
   display: flex;
   flex-direction: column;
   box-sizing: border-box;
-  z-index: 40;
-}
-
-/* Subtle Active Filter indicator in map area */
-.activeFilterIndicator {
-  position: absolute;
-  top: 1rem;
-  right: 1rem;
-  z-index: 30;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  background: rgba(15, 23, 42, 0.90);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
-  border: 1px solid rgba(56, 189, 248, 0.3);
-  border-radius: 8px;
-  padding: 5px 10px;
-  font-size: 11.5px;
-  color: #e2e8f0;
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
-  animation: fadeInFilter 0.2s ease;
-}
-
-.activeFilterDot {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  flex-shrink: 0;
-}
-
-.activeFilterText {
-  color: #94a3b8;
-  font-size: 11px;
-}
-
-.activeFilterText strong {
-  color: #f8fafc;
-  font-weight: 600;
-  text-transform: capitalize;
-}
-
-.resetFilterBtn {
-  background: rgba(248, 113, 113, 0.15);
-  border: 1px solid rgba(248, 113, 113, 0.3);
-  color: #f87171;
-  border-radius: 4px;
-  padding: 1px 6px;
-  font-size: 10.5px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.15s ease;
-  line-height: 1.4;
-}
-
-.resetFilterBtn:hover {
-  background: rgba(248, 113, 113, 0.28);
-  color: #ffffff;
-}
-
-@keyframes fadeInFilter {
-  from {
-    opacity: 0;
-    transform: translateY(-4px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  z-index: 50;
+  pointer-events: auto;
 }
 
 /* ── Responsive ── */
@@ -260,20 +393,27 @@
     flex-direction: column;
     align-items: flex-start;
     gap: 8px;
-    padding: 12px 16px;
+    padding: 8px 14px;
+    min-height: auto;
+    max-height: none;
   }
 
-  .topChips {
+  .rightSection {
+    width: 100%;
+    justify-content: space-between;
     flex-wrap: wrap;
+    gap: 6px;
   }
 
   .detailsPanelWrapper {
     position: absolute;
-    top: 12px;
-    right: 12px;
-    bottom: 12px;
-    width: min(400px, calc(100vw - 24px));
-    padding: 0;
+    top: 8px;
+    right: 8px;
+    bottom: 8px;
+    left: 8px;
+    width: auto;
+    max-width: none;
+    z-index: 55;
   }
 }
 
@@ -281,6 +421,10 @@
   .buildingLabel {
     flex-direction: column;
     align-items: flex-start;
-    gap: 4px;
+    gap: 2px;
+  }
+
+  .statusSummaryBar {
+    display: none;
   }
 }

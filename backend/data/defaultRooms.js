@@ -55,6 +55,16 @@ const DEFAULT_ROOMS = [
   { id: 'B-302', roomNumber: 'B-302', floorNumber: 3, roomType: 'Laboratory', roomName: 'Siddartha Lab', label: 'B-302 — Siddartha Lab', capacity: 40, block: 'B', buildingId: 'BLD001' },
   { id: 'B-304', roomNumber: 'B-304', floorNumber: 3, roomType: 'Computer Lab', roomName: 'Computer Lab', label: 'B-304 — Computer Lab', capacity: 40, block: 'B', buildingId: 'BLD001' },
   { id: 'B-305', roomNumber: 'B-305', floorNumber: 3, roomType: 'Computer Lab', roomName: 'Computer Lab Back Entrance', label: 'B-305 — Computer Lab Back Entrance', capacity: 30, block: 'B', buildingId: 'BLD001' },
+
+  // Block D Rooms (BLD001 / B04, Block D)
+  { id: 'D-101', roomNumber: 'D-101', floorNumber: 1, roomType: 'Classroom', label: 'D-101 — Classroom', capacity: 60, block: 'D', buildingId: 'BLD001' },
+  { id: 'D-102', roomNumber: 'D-102', floorNumber: 1, roomType: 'Classroom', label: 'D-102 — Classroom', capacity: 60, block: 'D', buildingId: 'BLD001' },
+  { id: 'D-105', roomNumber: 'D-105', floorNumber: 1, roomType: 'Seminar Hall', roomName: 'Department Seminar Hall', label: 'D-105 — Department Seminar Hall', capacity: 80, block: 'D', buildingId: 'BLD001' },
+  { id: 'D-201', roomNumber: 'D-201', floorNumber: 2, roomType: 'Lecture Hall', label: 'D-201 — Lecture Hall', capacity: 70, block: 'D', buildingId: 'BLD001' },
+  { id: 'D-202', roomNumber: 'D-202', floorNumber: 2, roomType: 'Research Laboratory', roomName: 'Advanced Computing & Research Lab', label: 'D-202 — Advanced Computing & Research Lab', capacity: 35, block: 'D', buildingId: 'BLD001' },
+  { id: 'D-205', roomNumber: 'D-205', floorNumber: 2, roomType: 'Faculty Chambers', label: 'D-205 — Faculty Chambers', capacity: 15, block: 'D', buildingId: 'BLD001' },
+  { id: 'D-301', roomNumber: 'D-301', floorNumber: 3, roomType: 'Computer Lab', roomName: 'Computer Applications Lab', label: 'D-301 — Computer Applications Lab', capacity: 40, block: 'D', buildingId: 'BLD001' },
+  { id: 'D-302', roomNumber: 'D-302', floorNumber: 3, roomType: 'Laboratory', roomName: 'Engineering Design Studio', label: 'D-302 — Engineering Design Studio', capacity: 40, block: 'D', buildingId: 'BLD001' },
 ];
 
 function getDefaultRooms() {
