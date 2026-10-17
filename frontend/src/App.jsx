@@ -4,7 +4,14 @@ import Header from './components/Header';
 import CommandPalette from './components/CommandPalette';
 import Dashboard from './pages/Dashboard';
 import Campus from './pages/Campus';
+import Analytics from './pages/Analytics';
+import Occupancy from './pages/Occupancy';
+import Congestion from './pages/Congestion';
+import Maintenance from './pages/Maintenance';
+import Alerts from './pages/Alerts';
+import Energy from './pages/Energy';
 import Placeholder from './pages/Placeholder';
+import FloatingAiChat from './components/FloatingAiChat/FloatingAiChat';
 import { getAlerts } from './api/client';
 import './App.css';
 
@@ -20,17 +27,42 @@ export default function App() {
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
   const [alertCount, setAlertCount] = useState(0);
 
-  // Fetch verified critical alerts count for badge display
+  // Central dashboard reporting date context (Default: Wednesday, October 14, 2026)
+  const [reportingDate, setReportingDate] = useState(() => {
+    try {
+      const stored = sessionStorage.getItem('unitwin_reporting_date');
+      if (stored && /^\d{4}-\d{2}-\d{2}$/.test(stored)) return stored;
+      const urlParams = new URLSearchParams(window.location.search);
+      const qDate = urlParams.get('date');
+      if (qDate && /^\d{4}-\d{2}-\d{2}$/.test(qDate)) return qDate;
+    } catch {
+      // ignore
+    }
+    return '2026-10-14';
+  });
+
+  const handleSelectDate = (newDate) => {
+    if (!newDate || typeof newDate !== 'string') return;
+    setReportingDate(newDate);
+    try {
+      sessionStorage.setItem('unitwin_reporting_date', newDate);
+    } catch {
+      // ignore
+    }
+  };
+
+  // Fetch verified critical alerts count for badge display from MongoDB
   useEffect(() => {
     let isMounted = true;
     async function loadAlertsCount() {
       try {
-        const res = await getAlerts({ prototype: false });
+        const res = await getAlerts();
         if (isMounted && res && Array.isArray(res.data)) {
           const validCritical = res.data.filter((a) => {
-            if (!a || typeof a !== 'object' || a.prototype === true) return false;
+            if (!a || typeof a !== 'object') return false;
             const sev = String(a.severity || '').toLowerCase();
-            return (sev === 'critical' || sev === 'high') && !a.acknowledged;
+            const stat = String(a.status || 'Active').toLowerCase();
+            return (sev === 'critical' || sev === 'high') && stat !== 'resolved' && !a.acknowledged;
           });
           setAlertCount(validCritical.length);
         }
@@ -56,19 +88,64 @@ export default function App() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
-  const handleNavigate = (page) => {
+  // Listen to browser hash navigation
+  useEffect(() => {
+    const handleHashChange = () => {
+      const raw = window.location.hash.replace('#', '').split('?')[0].toLowerCase();
+      if (['dashboard', 'campus', 'analytics', 'occupancy', 'energy', 'congestion', 'maintenance', 'alerts'].includes(raw)) {
+        setActivePage(raw);
+      }
+    };
+    window.addEventListener('hashchange', handleHashChange);
+    return () => window.removeEventListener('hashchange', handleHashChange);
+  }, []);
+
+  const handleNavigate = (page, params = {}) => {
     setActivePage(page);
-    window.location.hash = page;
+    if (params && params.type) {
+      sessionStorage.setItem('unitwin_alerts_filter_type', params.type);
+      window.location.hash = `${page}?type=${encodeURIComponent(params.type)}`;
+    } else if (params && params.buildingId) {
+      sessionStorage.setItem('unitwin_campus_selected_building', params.buildingId);
+      window.location.hash = `${page}?building=${encodeURIComponent(params.buildingId)}`;
+    } else if (params && params.search) {
+      sessionStorage.setItem('unitwin_global_search_term', params.search);
+      window.location.hash = `${page}?q=${encodeURIComponent(params.search)}`;
+    } else {
+      window.location.hash = page;
+    }
   };
 
   function renderPage() {
-    if (activePage === 'dashboard') return <Dashboard onNavigate={handleNavigate} />;
-    if (activePage === 'campus') return <Campus />;
+    if (activePage === 'dashboard') {
+      return (
+        <Dashboard
+          onNavigate={handleNavigate}
+          reportingDate={reportingDate}
+          onSelectDate={handleSelectDate}
+        />
+      );
+    }
+    if (activePage === 'campus') return <Campus reportingDate={reportingDate} />;
+    if (activePage === 'analytics') return <Analytics onNavigate={handleNavigate} reportingDate={reportingDate} onSelectDate={handleSelectDate} />;
+    if (activePage === 'occupancy') return <Occupancy reportingDate={reportingDate} onSelectDate={handleSelectDate} />;
+    if (activePage === 'energy') {
+      return (
+        <Energy
+          onNavigate={handleNavigate}
+          reportingDate={reportingDate}
+          onSelectDate={handleSelectDate}
+        />
+      );
+    }
+    if (activePage === 'congestion') return <Congestion />;
+    if (activePage === 'maintenance') return <Maintenance />;
+    if (activePage === 'alerts') return <Alerts />;
     return <Placeholder page={activePage} />;
   }
 
   return (
-    <div className="app-shell">
+    <div className={`app-shell ${sidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
       <Sidebar
         activePage={activePage}
         onNavigate={handleNavigate}
@@ -77,18 +154,13 @@ export default function App() {
         alertCount={alertCount}
       />
 
-      <div
-        className="main-area"
-        style={{
-          marginLeft: sidebarCollapsed
-            ? 'var(--sidebar-w-col)'
-            : 'var(--sidebar-w)',
-        }}
-      >
+      <div className={`main-area ${sidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
         <Header
           activePage={activePage}
           onOpenCommandPalette={() => setCommandPaletteOpen(true)}
           alertCount={alertCount}
+          reportingDate={reportingDate}
+          onSelectDate={handleSelectDate}
         />
         <main className="page-content" id="main-content">
           {renderPage()}
@@ -101,6 +173,14 @@ export default function App() {
         onClose={() => setCommandPaletteOpen(false)}
         onSelectPage={handleNavigate}
       />
+
+      {/* Floating AI Assistant - Strictly excluded on interactive Campus page */}
+      {activePage !== 'campus' && (
+        <FloatingAiChat
+          activePage={activePage}
+          reportingDate={reportingDate}
+        />
+      )}
     </div>
   );
 }

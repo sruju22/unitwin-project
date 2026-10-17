@@ -90,38 +90,39 @@ const NAV_ITEMS = [
 
 export default function Sidebar({ activePage, onNavigate, collapsed, onToggle, alertCount = 0 }) {
   return (
-    <aside className={`${styles.sidebar} ${collapsed ? styles.collapsed : ''}`}>
+    <aside
+      className={`${styles.sidebar} ${collapsed ? styles.collapsed : ''}`}
+      aria-label="Sidebar navigation"
+    >
       {/* Brand */}
       <div className={styles.brand}>
-        <div className={styles.brandIcon}>
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-            <path d="M12 2L2 7l10 5 10-5-10-5z" fill="url(#grad)" />
-            <path d="M2 17l10 5 10-5" stroke="url(#grad)" strokeWidth="2" strokeLinecap="round" />
-            <path d="M2 12l10 5 10-5" stroke="url(#grad)" strokeWidth="2" strokeLinecap="round" />
-            <defs>
-              <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" stopColor="#2979ff" />
-                <stop offset="100%" stopColor="#00e5ff" />
-              </linearGradient>
-            </defs>
-          </svg>
+        <div className={styles.brandIcon} title="Dr. Ambedkar Institute of Technology">
+          <img
+            src="/ait-logo.png"
+            alt="Dr. Ambedkar Institute of Technology Emblem"
+            className={styles.brandLogoImg}
+          />
         </div>
         {!collapsed && (
           <div className={styles.brandText}>
-            <span className={styles.brandName}>UNITWIN</span>
-            <span className={styles.brandSub}>Digital Twin</span>
+            <span className={styles.brandName}>AIT Campus Intelligence</span>
+            <div className={styles.brandSub}>
+              <span>SMART CAMPUS</span>
+              <span>MONITORING & ANALYTICS</span>
+            </div>
           </div>
         )}
         <button
           id="sidebar-toggle-btn"
           className={styles.toggleBtn}
           onClick={onToggle}
-          aria-label="Toggle sidebar"
+          aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
         >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
             {collapsed
-              ? <><path d="M9 18l6-6-6-6" /></>
-              : <><path d="M15 18l-6-6 6-6" /></>
+              ? <path d="M9 18l6-6-6-6" />
+              : <path d="M15 18l-6-6 6-6" />
             }
           </svg>
         </button>
@@ -135,13 +136,16 @@ export default function Sidebar({ activePage, onNavigate, collapsed, onToggle, a
         {NAV_ITEMS.map((item) => {
           const isActive = activePage === item.id;
           const itemBadge = item.id === 'alerts' && alertCount > 0 ? alertCount : item.badge;
+          const tooltipLabel = itemBadge ? `${item.label} (${itemBadge})` : item.label;
+
           return (
             <button
               key={item.id}
               id={`nav-${item.id}`}
               className={`${styles.navItem} ${isActive ? styles.active : ''}`}
               onClick={() => onNavigate(item.id)}
-              title={collapsed ? item.label : undefined}
+              title={collapsed ? tooltipLabel : undefined}
+              aria-label={item.label}
             >
               <span className={styles.navIcon}>{item.icon}</span>
               {!collapsed && <span className={styles.navLabel}>{item.label}</span>}
@@ -157,12 +161,10 @@ export default function Sidebar({ activePage, onNavigate, collapsed, onToggle, a
       </nav>
 
       {/* Footer */}
-      {!collapsed && (
-        <div className={styles.sidebarFooter}>
-          <div className={styles.statusDot} />
-          <span>System Online</span>
-        </div>
-      )}
+      <div className={styles.sidebarFooter}>
+        <div className={styles.statusDot} title="System Online" />
+        {!collapsed && <span>System Online</span>}
+      </div>
     </aside>
   );
 }

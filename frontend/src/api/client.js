@@ -99,4 +99,95 @@ export async function getInsights(params = {}) {
   return response.data;
 }
 
+/**
+ * Fetch campus congestion records
+ */
+export async function getCongestion(params = {}) {
+  const response = await apiClient.get('/api/congestion', { params });
+  return response.data;
+}
+
+/**
+ * Fetch campus maintenance work orders
+ */
+export async function getMaintenance(params = {}) {
+  const response = await apiClient.get('/api/maintenance', { params });
+  return response.data;
+}
+
+/**
+ * Fetch solar PV generation records and summaries from MongoDB Atlas
+ */
+export async function getSolarGeneration(params = {}) {
+  const response = await apiClient.get('/api/solar-generation', { params });
+  return response.data;
+}
+
+/**
+ * Fetch solar PV summary KPI metrics
+ */
+export async function getSolarSummary() {
+  const response = await apiClient.get('/api/solar-generation/summary');
+  return response.data;
+}
+
+/**
+ * Send inquiry to Campus AI Floating Assistant
+ * @param {{ message: string, history?: Array<{ role: string, text: string }>, pageContext?: string }} payload
+ */
+export async function sendChatMessage(payload) {
+  const response = await apiClient.post('/api/ai/chat', payload);
+  return response.data;
+}
+
+/**
+ * Fetch AI service configuration & readiness status
+ */
+export async function getAiStatus() {
+  const response = await apiClient.get('/api/ai/status');
+  return response.data;
+}
+
+/**
+ * Unified campus-aware search
+ * @param {{ q: string, types?: string, limit?: number, asOfDate?: string }} params
+ */
+export async function searchCampus(params = {}) {
+  const response = await apiClient.get('/api/search', { params });
+  return response.data;
+}
+
+/**
+ * Camera Live Video Streaming APIs (C-110 Smart Classroom only)
+ */
+export async function getCameraStatus(roomId = 'c110') {
+  const cleanId = roomId.toLowerCase().replace(/[^a-z0-9]/g, '');
+  const response = await apiClient.get(`/api/camera/${cleanId}/status`);
+  return response.data;
+}
+
+export async function startCameraStream(roomId = 'c110', clientId) {
+  const cleanId = roomId.toLowerCase().replace(/[^a-z0-9]/g, '');
+  const response = await apiClient.post(`/api/camera/${cleanId}/start`, { clientId });
+  return response.data;
+}
+
+export async function stopCameraStream(roomId = 'c110', clientId, force = false) {
+  const cleanId = roomId.toLowerCase().replace(/[^a-z0-9]/g, '');
+  const response = await apiClient.post(`/api/camera/${cleanId}/stop`, { clientId, force });
+  return response.data;
+}
+
+export async function sendCameraHeartbeat(roomId = 'c110', clientId) {
+  const cleanId = roomId.toLowerCase().replace(/[^a-z0-9]/g, '');
+  const response = await apiClient.post(`/api/camera/${cleanId}/heartbeat`, { clientId });
+  return response.data;
+}
+
+export function getCameraStreamUrl(roomId = 'c110') {
+  const cleanId = roomId.toLowerCase().replace(/[^a-z0-9]/g, '');
+  return `${API_BASE_URL}/api/camera/${cleanId}/stream.m3u8`;
+}
+
 export default apiClient;
+

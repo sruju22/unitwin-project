@@ -1,13 +1,14 @@
 .skeleton {
   background: linear-gradient(
     90deg,
-    rgba(255, 255, 255, 0.03) 0%,
-    rgba(255, 255, 255, 0.08) 50%,
-    rgba(255, 255, 255, 0.03) 100%
+    var(--border) 0%,
+    var(--bg-subtle) 50%,
+    var(--border) 100%
   );
   background-size: 200% 100%;
   animation: shimmer 1.6s infinite ease-in-out;
   display: inline-block;
+  border-radius: var(--radius-sm);
 }
 
 @keyframes shimmer {

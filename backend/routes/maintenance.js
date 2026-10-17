@@ -1,0 +1,88 @@
+const express = require('express');
+const router = express.Router();
+const mongoose = require('mongoose');
+
+// GET /api/maintenance - List and filter maintenance issues from MongoDB Atlas
+router.get('/', async (req, res, next) => {
+  try {
+    const db = mongoose.connection.db;
+    const filter = {};
+
+    if (req.query.buildingId) {
+      filter.buildingId = req.query.buildingId;
+    }
+    if (req.query.roomNumber) {
+      filter.roomNumber = new RegExp(req.query.roomNumber, 'i');
+    }
+    if (req.query.priority) {
+      filter.priority = new RegExp(`^${req.query.priority}$`, 'i');
+    }
+    if (req.query.status) {
+      filter.status = new RegExp(`^${req.query.status}$`, 'i');
+    }
+    if (req.query.assetType) {
+      filter.assetType = new RegExp(`^${req.query.assetType}$`, 'i');
+    }
+    if (req.query.date) {
+      // Date in Asia/Kolkata (YYYY-MM-DD)
+      const start = new Date(`${req.query.date}T00:00:00+05:30`);
+      const end = new Date(`${req.query.date}T23:59:59.999+05:30`);
+      filter.reportedDate = { ...(filter.reportedDate || {}), $gte: start, $lte: end };
+    } else if (req.query.asOfDate) {
+      const parsedDate = new Date(req.query.asOfDate);
+      if (!isNaN(parsedDate.getTime())) {
+        filter.reportedDate = { ...(filter.reportedDate || {}), $lte: parsedDate };
+      }
+    }
+
+    const limit = parseInt(req.query.limit, 10) || 100;
+    // Query maintainence collection in Atlas
+    const records = await db
+      .collection('maintainence')
+      .find(filter)
+      .sort({ priority: 1, reportedDate: -1 })
+      .limit(limit)
+      .toArray();
+
+    const openCount = records.filter(
+      (r) => (r.status || '').toLowerCase() === 'open'
+    ).length;
+    const inProgressCount = records.filter(
+      (r) => (r.status || '').toLowerCase() === 'in progress'
+    ).length;
+    const scheduledCount = records.filter(
+      (r) => (r.status || '').toLowerCase() === 'scheduled'
+    ).length;
+    const resolvedCount = records.filter(
+      (r) => (r.status || '').toLowerCase() === 'resolved'
+    ).length;
+    const highPriorityCount = records.filter(
+      (r) => (r.priority || '').toLowerCase() === 'high'
+    ).length;
+    const mediumPriorityCount = records.filter(
+      (r) => (r.priority || '').toLowerCase() === 'medium'
+    ).length;
+
+    const summary = {
+      totalCount: records.length,
+      openCount,
+      inProgressCount,
+      scheduledCount,
+      resolvedCount,
+      highPriorityCount,
+      mediumPriorityCount,
+      isPrototype: records.some((r) => r.prototype === true),
+    };
+
+    res.json({
+      success: true,
+      count: records.length,
+      summary,
+      data: records,
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+module.exports = router;

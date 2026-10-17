@@ -4,129 +4,387 @@
   display: flex;
   flex-direction: column;
   flex: 1;
+  height: calc(100vh - var(--header-h, 64px));
+  height: calc(100dvh - var(--header-h, 64px));
+  max-height: calc(100dvh - var(--header-h, 64px));
   overflow: hidden;
   background: var(--bg-base);
 }
 
-/* ── Top bar ── */
+/* ── Consolidated Campus Toolbar (Reduced Height & Single Status/Filter Interface) ── */
 .topBar {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px 24px;
+  padding: 6px 18px;
+  min-height: 40px;
+  max-height: 44px;
   border-bottom: 1px solid var(--border);
-  background: linear-gradient(90deg, rgba(14, 17, 24, 0.95) 0%, rgba(10, 12, 18, 0.95) 100%);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
-  gap: 16px;
+  background: var(--bg-surface, #FFFFFF);
+  gap: 12px;
   flex-shrink: 0;
-  z-index: 10;
+  z-index: 20;
+}
+
+.leftSection {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
 }
 
 .buildingLabel {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 7px;
+  white-space: nowrap;
+}
+
+.toolbarIcon {
+  font-size: 13px;
+  line-height: 1;
 }
 
 .blockName {
   font-family: var(--font-display);
-  font-size: 16px;
+  font-size: 13px;
   font-weight: 700;
-  color: var(--text-primary);
+  color: var(--text-heading);
   letter-spacing: -0.01em;
+  margin: 0;
+  white-space: nowrap;
+}
+
+.toolbarDivider {
+  color: var(--border-hover, #CBD5E1);
+  font-size: 10px;
 }
 
 .blockSub {
-  font-size: 12px;
-  color: var(--text-muted);
+  font-size: 11.5px;
+  color: var(--text-secondary);
+  white-space: nowrap;
 }
 
-.liveTag {
-  font-size: 9px;
-  font-weight: 700;
-  color: #10b981;
-  background: rgba(16, 185, 129, 0.12);
-  border: 1px solid rgba(16, 185, 129, 0.25);
-  padding: 2px 7px;
-  border-radius: 99px;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.liveDot {
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
-  background: #10b981;
-}
-
-/* Glass Status Chips in Header */
-.topChips {
+.rightSection {
   display: flex;
   align-items: center;
   gap: 8px;
+  flex-shrink: 0;
 }
 
-.glassChip {
-  background: rgba(255, 255, 255, 0.035);
-  border: 1px solid rgba(255, 255, 255, 0.07);
+/* 1. Single Compact Status Summary */
+.statusSummaryBar {
+  display: inline-flex;
+  align-items: center;
+  background: var(--bg-subtle, #F8FAFC);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 2px 4px;
+  gap: 2px;
+  font-size: 11px;
+  line-height: 1;
+}
+
+.statusSummaryItem {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  padding: 2px 6px;
+  cursor: pointer;
+  transition: all 0.12s ease;
+  line-height: 1.2;
+}
+
+.statusSummaryItem:hover {
+  background: var(--bg-hover, #F1F5F9);
+}
+
+.summaryItemActive {
+  background: #FFFFFF !important;
+  border-color: var(--border) !important;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
+}
+
+.summaryLabel {
+  color: var(--text-secondary);
+  font-weight: 500;
+  font-size: 10.5px;
+}
+
+.summaryVal {
+  color: var(--text-heading);
+  font-weight: 700;
+  font-family: var(--font-mono, monospace);
+  font-size: 10.5px;
+}
+
+.summaryBadge {
+  font-weight: 700;
+  color: var(--text-heading);
+  font-family: var(--font-mono, monospace);
+  font-size: 10.5px;
+  background: rgba(15, 23, 42, 0.06);
+  padding: 0 4px;
+  border-radius: 3px;
+}
+
+.summaryDivider {
+  color: var(--border-hover, #CBD5E1);
+  font-size: 10px;
+  margin: 0 1px;
+}
+
+.summaryDot {
+  width: 5.5px;
+  height: 5.5px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+/* 2. Compact Filters Button & Popover */
+.filterControlWrapper {
+  position: relative;
+}
+
+.filterBtn {
+  background: var(--bg-subtle, #F8FAFC);
+  border: 1px solid var(--border);
+  color: var(--text-heading);
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  line-height: 1.3;
+}
+
+.filterBtn:hover {
+  background: var(--bg-hover, #F1F5F9);
+  border-color: var(--border-hover, #CBD5E1);
+}
+
+.filterBtnActive {
+  background: rgba(37, 99, 235, 0.08) !important;
+  border-color: rgba(37, 99, 235, 0.45) !important;
+  color: var(--primary-blue, #2563EB) !important;
+}
+
+.filterActiveDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.filterCaret {
+  transition: transform 0.15s ease;
+  color: var(--text-secondary);
+}
+
+.caretOpen {
+  transform: rotate(180deg);
+}
+
+/* Filters Popover Panel */
+.filterPopover {
+  position: absolute;
+  top: calc(100% + 5px);
+  right: 0;
+  width: 250px;
+  background: #FFFFFF;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.12), 0 8px 10px -6px rgba(0, 0, 0, 0.08);
+  padding: 6px;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  animation: popoverFadeIn 0.15s ease;
+}
+
+@keyframes popoverFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.popoverHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 6px 6px 6px;
+  border-bottom: 1px solid var(--border-subtle, #F1F5F9);
+  margin-bottom: 2px;
+}
+
+.popoverTitle {
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-secondary);
+}
+
+.popoverResetTextBtn {
+  background: transparent;
+  border: none;
+  color: var(--status-error, #EF4444);
+  font-size: 10.5px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+  transition: opacity 0.15s ease;
+}
+
+.popoverResetTextBtn:hover {
+  opacity: 0.8;
+  text-decoration: underline;
+}
+
+.popoverList {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.popoverItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 5px 8px;
+  border-radius: 5px;
+  border: 1px solid transparent;
+  background: transparent;
+  cursor: pointer;
+  transition: all 0.12s ease;
+  width: 100%;
+  text-align: left;
+}
+
+.popoverItem:hover {
+  background: var(--bg-hover, #F8FAFC);
+}
+
+.popoverItemActive {
+  background: rgba(37, 99, 235, 0.08) !important;
+  border-color: rgba(37, 99, 235, 0.25) !important;
+}
+
+.popoverItemLeft {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+}
+
+.popoverItemIcon {
+  font-size: 11px;
+  line-height: 1;
+}
+
+.popoverDot {
+  width: 6.5px;
+  height: 6.5px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.popoverItemLabel {
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--text-heading);
+}
+
+.popoverItemSub {
+  font-size: 9.5px;
+  color: var(--text-secondary);
+  line-height: 1.2;
+}
+
+.popoverCountBadge {
+  font-size: 10px;
+  font-weight: 700;
+  font-family: var(--font-mono, monospace);
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: var(--bg-subtle, #F1F5F9);
+  color: var(--text-heading);
+}
+
+.popoverDivider {
+  height: 1px;
+  background: var(--border-subtle, #F1F5F9);
+  margin: 3px 0;
+}
+
+/* 3. Register & Analytics Action */
+.analyticsTriggerBtn {
+  background: var(--primary-blue, #2563EB);
+  border: 1px solid var(--primary-blue, #2563EB);
+  color: #FFFFFF;
   padding: 4px 10px;
   border-radius: 6px;
   font-size: 11px;
-  color: var(--text-secondary);
-  display: flex;
+  font-weight: 600;
+  display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 5px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  box-shadow: 0 1px 2px rgba(37, 99, 235, 0.15);
+  line-height: 1.2;
 }
 
-.glassChip strong {
-  color: var(--text-primary);
-  font-weight: 600;
+.analyticsTriggerBtn:hover {
+  background: var(--primary-blue-hover, #1D4ED8);
+  border-color: var(--primary-blue-hover, #1D4ED8);
 }
 
 /* ── Main content ── */
 .content {
   display: flex;
+  flex-direction: row;
   flex: 1;
+  min-height: 0;
   overflow: hidden;
   position: relative;
+  background: #0f172a;
 }
 
-/* Subtle Floating Map HUD (Atmospheric glass labels without obstructing view) */
-.mapHud {
+.mapContainer {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  position: relative;
+  overflow: hidden;
+}
+
+.detailsPanelWrapper {
   position: absolute;
-  top: 16px;
-  right: 16px;
+  top: 12px;
+  right: 12px;
+  bottom: 12px;
+  width: 440px;
+  max-width: calc(100vw - 24px);
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  z-index: 20;
-  pointer-events: none;
-}
-
-.hudItem {
-  background: rgba(10, 13, 20, 0.72);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 6px;
-  padding: 5px 10px;
-  font-size: 10.5px;
-  color: var(--text-secondary);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.hudItem span {
-  color: #2dd4bf;
-  font-family: var(--font-mono);
-  font-size: 10px;
+  box-sizing: border-box;
+  z-index: 50;
+  pointer-events: auto;
 }
 
 /* ── Responsive ── */
@@ -135,11 +393,27 @@
     flex-direction: column;
     align-items: flex-start;
     gap: 8px;
-    padding: 12px 16px;
+    padding: 8px 14px;
+    min-height: auto;
+    max-height: none;
   }
 
-  .topChips {
+  .rightSection {
+    width: 100%;
+    justify-content: space-between;
     flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .detailsPanelWrapper {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    bottom: 8px;
+    left: 8px;
+    width: auto;
+    max-width: none;
+    z-index: 55;
   }
 }
 
@@ -147,10 +421,10 @@
   .buildingLabel {
     flex-direction: column;
     align-items: flex-start;
-    gap: 4px;
+    gap: 2px;
   }
 
-  .mapHud {
+  .statusSummaryBar {
     display: none;
   }
 }

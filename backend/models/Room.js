@@ -7,6 +7,8 @@ const roomSchema = new mongoose.Schema(
     block: { type: String, required: true },
     floorNumber: { type: Number, required: true },
     roomType: { type: String, required: true },
+    roomName: { type: String },
+    name: { type: String },
     status: { type: String, default: 'Active' },
     prototype: { type: Boolean, default: false },
   },

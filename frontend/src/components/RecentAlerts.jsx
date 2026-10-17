@@ -25,9 +25,9 @@ const ALERTS = [
 ];
 
 const SEVERITY_META = {
-  critical: { label: 'Critical', color: '#ff4f6d' },
-  warning:  { label: 'Warning',  color: '#ffb547' },
-  info:     { label: 'Info',     color: '#4fa3ff' },
+  critical: { label: 'Critical', color: '#DC2626' },
+  warning:  { label: 'Warning',  color: '#D97706' },
+  info:     { label: 'Info',     color: '#2563EB' },
 };
 
 export default function RecentAlerts() {
@@ -45,14 +45,14 @@ export default function RecentAlerts() {
             <li key={alert.id} className={styles.item}>
               <span
                 className={styles.dot}
-                style={{ background: meta.color, boxShadow: `0 0 6px ${meta.color}` }}
+                style={{ background: meta.color }}
               />
               <div className={styles.itemBody}>
                 <div className={styles.itemTop}>
                   <span className={styles.itemTitle}>{alert.title}</span>
                   <span
                     className={styles.severityBadge}
-                    style={{ color: meta.color, borderColor: `${meta.color}44`, background: `${meta.color}11` }}
+                    style={{ color: meta.color, borderColor: `${meta.color}33`, background: `${meta.color}1a` }}
                   >
                     {meta.label}
                   </span>

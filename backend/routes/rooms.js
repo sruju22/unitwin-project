@@ -13,7 +13,12 @@ router.get('/', async (req, res, next) => {
 
     if (req.query.block) {
       // Support case-insensitive block matching (e.g., 'C' or 'c')
-      filter.block = new RegExp(`^${req.query.block}$`, 'i');
+      // For BLD002 (Silver Jubilee / S-Block), allow 'S' to match 'Silver Jubilee'
+      if (req.query.buildingId && req.query.buildingId.toUpperCase() === 'BLD002' && /^s$/i.test(req.query.block)) {
+        filter.block = /^(S|Silver Jubilee)$/i;
+      } else {
+        filter.block = new RegExp(`^${req.query.block}$`, 'i');
+      }
     }
 
     if (req.query.floorNumber !== undefined) {
@@ -31,9 +36,22 @@ router.get('/', async (req, res, next) => {
       filter.prototype = req.query.prototype === 'true';
     }
 
-    const rooms = await Room.find(filter)
+    let rooms = await Room.find(filter)
       .sort({ floorNumber: 1, roomNumber: 1 })
       .lean();
+
+    // If database returned no rooms, fallback to verified default room registry
+    if ((!rooms || rooms.length === 0) && (!req.query.prototype || req.query.prototype === 'false')) {
+      const { getDefaultRooms } = require('../data/defaultRooms');
+      const allDefaults = getDefaultRooms();
+      rooms = allDefaults.filter((r) => {
+        if (req.query.buildingId && (r.buildingId || '').toUpperCase() !== req.query.buildingId.toUpperCase()) return false;
+        if (req.query.block && !new RegExp(`^${req.query.block}$`, 'i').test(r.block || '')) return false;
+        if (req.query.floorNumber !== undefined && r.floorNumber !== parseInt(req.query.floorNumber, 10)) return false;
+        if (req.query.roomType && !new RegExp(req.query.roomType, 'i').test(r.roomType || '')) return false;
+        return true;
+      });
+    }
 
     res.json({
       success: true,
@@ -41,7 +59,24 @@ router.get('/', async (req, res, next) => {
       data: rooms,
     });
   } catch (err) {
-    next(err);
+    try {
+      const { getDefaultRooms } = require('../data/defaultRooms');
+      const allDefaults = getDefaultRooms();
+      const rooms = allDefaults.filter((r) => {
+        if (req.query.buildingId && (r.buildingId || '').toUpperCase() !== req.query.buildingId.toUpperCase()) return false;
+        if (req.query.block && !new RegExp(`^${req.query.block}$`, 'i').test(r.block || '')) return false;
+        if (req.query.floorNumber !== undefined && r.floorNumber !== parseInt(req.query.floorNumber, 10)) return false;
+        if (req.query.roomType && !new RegExp(req.query.roomType, 'i').test(r.roomType || '')) return false;
+        return true;
+      });
+      return res.json({
+        success: true,
+        count: rooms.length,
+        data: rooms,
+      });
+    } catch {
+      next(err);
+    }
   }
 });
 
